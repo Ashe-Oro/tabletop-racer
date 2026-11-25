@@ -1,3 +1,5 @@
+import { loadManifest, sliceUrl } from './asset-source'
+
 export interface AssetEntry {
   slices: number
   sliceWidth: number
@@ -43,9 +45,9 @@ export function makeCanvas(width: number, height: number) {
   return { canvas, ctx }
 }
 
-async function loadStack(id: StackId, entry: AssetEntry, base: string): Promise<StackAsset> {
+async function loadStack(id: StackId, entry: AssetEntry): Promise<StackAsset> {
   const image = new Image()
-  image.src = `${base}slices/${id}.png`
+  image.src = sliceUrl(id)
   await image.decode()
   validateStrip(id, entry, image.naturalWidth, image.naturalHeight)
   const { ctx } = makeCanvas(image.naturalWidth, image.naturalHeight)
@@ -69,13 +71,10 @@ async function loadStack(id: StackId, entry: AssetEntry, base: string): Promise<
 }
 
 export async function loadAssets(): Promise<Record<AssetId, StackAsset>> {
-  const base = `${import.meta.env.BASE_URL}assets/`
-  const result = await fetch(`${base}manifest.json`, { cache: 'no-cache' })
-  if (!result.ok) throw new Error(`Asset manifest request returned ${result.status}`)
-  const manifest: unknown = await result.json()
+  const manifest = await loadManifest()
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) throw new Error('Invalid asset manifest')
   const manifestEntries = manifest as Record<string, unknown>
-  const load = async (id: StackId) => loadStack(id, validateEntry(id, manifestEntries[id]), base)
+  const load = async (id: StackId) => loadStack(id, validateEntry(id, manifestEntries[id]))
   const entries = await Promise.all(assetIds.map(async id => {
     const asset = id === 'car' ? await load(id).catch(error => {
       console.warn('Could not load "car". Falling back to "car_placeholder".', error)

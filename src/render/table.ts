@@ -1,4 +1,5 @@
 import { TABLE_HEIGHT, TABLE_WIDTH, TRACK_HALF_WIDTH, gates, route } from '../game/track'
+import { tableTileUrl } from './asset-source'
 import { makeCanvas } from './assets'
 import { SQUASH } from './stack'
 
@@ -13,7 +14,7 @@ export const EDGE = 21
 
 export async function bakeTable() {
   const tile = new Image()
-  tile.src = `${import.meta.env.BASE_URL}assets/table_wood_tile.png`
+  tile.src = tableTileUrl
   const loaded = await tile.decode().then(() => true, () => false)
   const depth = Math.ceil(TABLE_HEIGHT * SQUASH)
   const { canvas, ctx } = makeCanvas(TABLE_WIDTH + EDGE * 2, depth + EDGE * 2 + 26)
