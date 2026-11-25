@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import footprints from '../../public/assets/manifest.json'
 import { Car } from './car'
-import { TABLE_WIDTH } from './track'
+import { overlaps } from './collision'
+import { buildTrack, TABLE_WIDTH } from './track'
 
 const dt = 1 / 120
 const idle = { throttle: 0, steer: 0, handbrake: false }
@@ -58,26 +60,77 @@ describe('picnic-scale car', () => {
     const turnDirections = new Set<number>()
     for (let i = 0; i < 60; i++) {
       const before = car.heading
+      const along = car.velocity.x * Math.cos(before) + car.velocity.y * Math.sin(before)
       car.step(dt, { ...idle, throttle: -1, steer: 1 }, [])
-      turnDirections.add(Math.sign(car.heading - before))
-      if (turnDirections.has(-1)) expect(car.heading).toBeLessThanOrEqual(before)
+      const direction = Math.sign(car.heading - before)
+      expect(direction).toBe(along > 8 ? 1 : -1)
+      turnDirections.add(direction)
     }
-    expect([...turnDirections]).toEqual([1, 0, -1])
+    expect([...turnDirections]).toEqual([1, -1])
   })
 
-  it.each(['wall', 'prop'])('keeps heading steady during low-speed rebounds off a %s', obstacle => {
+  it.each([['wall', 1], ['wall', -1], ['prop', 1], ['prop', -1]])(
+    'keeps steering in one direction during low-speed rebounds off a %s with throttle %i', (obstacle, throttle) => {
+      const car = new Car()
+      car.heading = throttle > 0 ? 0 : Math.PI
+      car.position = { x: obstacle === 'wall' ? TABLE_WIDTH - 12.8 : 500, y: 900 }
+      const solids = obstacle === 'wall' ? [] : [{ x: 517.8, y: 900, radius: 5 }]
+      for (let i = 0; i < 30; i++) car.step(dt, { ...idle, throttle }, solids)
+
+      const initialHeading = car.heading
+      const turning = { ...idle, throttle, steer: 1 }
+      const along = () => car.velocity.x * Math.cos(car.heading) + car.velocity.y * Math.sin(car.heading)
+      let signChanges = 0
+      for (let i = 0; i < 84; i++) {
+        const previousHeading = car.heading
+        const previousAlong = along()
+        car.step(dt, turning, solids)
+        const currentAlong = along()
+        if (Math.abs(previousAlong) <= 8 && Math.abs(currentAlong) <= 8 && previousAlong * currentAlong < 0) {
+          signChanges++
+        }
+        expect((car.heading - previousHeading) * Math.sign(throttle) * turning.steer).toBeGreaterThan(0)
+      }
+      expect(signChanges).toBeGreaterThan(1)
+      expect((car.heading - initialHeading) * Math.sign(throttle)).toBeGreaterThan(1)
+    },
+  )
+
+  it('steers clear of the south edge of the picnic basket from the Stripe spawn', () => {
+    const { solids } = buildTrack(footprints)
+    const basket = solids.find(solid => solid.x === 2175 && solid.y === 2250)
+    if (!basket) throw new Error('Missing QA basket collider')
     const car = new Car()
-    car.heading = 0
-    car.position = { x: obstacle === 'wall' ? TABLE_WIDTH - 12.8 : 500, y: 900 }
-    const solids = obstacle === 'wall' ? [] : [{ x: 517.8, y: 900, radius: 5 }]
-    let signChanges = 0
-    for (let i = 0; i < 60; i++) {
-      const previousX = car.velocity.x
-      car.step(dt, { ...idle, throttle: 1, steer: 1 }, solids)
-      if (previousX * car.velocity.x < 0) signChanges++
-      expect(car.heading).toBe(0)
+    const drive = (steer: number, frames: number) => {
+      for (let i = 0; i < frames; i++) car.step(dt, { ...idle, throttle: 1, steer }, solids)
     }
-    expect(signChanges).toBeGreaterThan(10)
+    // Collision resolution leaves a small gap, so include it when checking proximity.
+    const nearBasket = (gap: number) => [-car.axle, 0, car.axle].some(offset => overlaps({
+      x: car.position.x + offset * Math.cos(car.heading),
+      y: car.position.y + offset * Math.sin(car.heading),
+      radius: car.radius,
+    }, basket, gap))
+
+    drive(-1, 60)
+    drive(0, 240)
+    expect(car.collisions).toBeGreaterThan(0)
+    expect(car.position.y).toBeGreaterThan(basket.y)
+    expect(car.speed).toBeLessThan(8)
+    expect(nearBasket(0.1)).toBe(true)
+    const pinnedHeading = car.heading
+
+    drive(1, 84)
+    expect(car.heading - pinnedHeading).toBeGreaterThan(1)
+    expect(nearBasket(0.1)).toBe(false)
+    expect(car.speed).toBeGreaterThan(60)
+    drive(1, 108)
+    const previousPosition = { ...car.position }
+    drive(1, 12)
+
+    expect(nearBasket(30)).toBe(false)
+    const dx = car.position.x - previousPosition.x
+    const dy = car.position.y - previousPosition.y
+    expect(dx * Math.cos(car.heading) + dy * Math.sin(car.heading)).toBeGreaterThan(20)
   })
 
   it('clears a nearby prop with its sides and bounces off a front contact', () => {

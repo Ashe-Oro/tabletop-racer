@@ -8,6 +8,9 @@ import { CAR_AXLE, CAR_RADIUS } from './cars'
 const TOP_SPEED = 270
 const STEERING_DEADBAND = 8
 const FULL_STEERING_SPEED = 60
+const LOW_SPEED_STEERING = 0.04
+const CONTACT_STEERING = 1.7
+const CONTACT_STEERING_GRACE = 0.06
 const WHEEL_CENTERS = [-CAR_AXLE, 0, CAR_AXLE]
 
 export interface Controls {
@@ -25,6 +28,7 @@ export class Car {
   slip = 0
   drifting = false
   private contactCooldown = 0
+  private contactSteeringTime = 0
   readonly axle = CAR_AXLE
   readonly radius = CAR_RADIUS
 
@@ -33,13 +37,15 @@ export class Car {
   step(dt: number, controls: Controls, solids: readonly Solid[]) {
     this.bump = Math.max(0, this.bump - 14 * dt)
     this.contactCooldown = Math.max(0, this.contactCooldown - dt)
+    this.contactSteeringTime = Math.max(0, this.contactSteeringTime - dt)
     const forward = { x: Math.cos(this.heading), y: Math.sin(this.heading) }
     const along = dot(this.velocity, forward)
     const speedRatio = clamp(Math.abs(along) / TOP_SPEED, 0, 1)
-    // Ignore low-speed sign changes from repeatedly rebounding off a contact.
+    // Use the requested direction when low-speed rebounds make velocity unreliable.
     const steerSpeed = along - clamp(along, -STEERING_DEADBAND, STEERING_DEADBAND)
-    const steering = clamp(steerSpeed / (FULL_STEERING_SPEED - STEERING_DEADBAND), -1, 1)
-      * (1 - 0.31 * speedRatio)
+    const steering = (steerSpeed === 0
+      ? Math.sign(controls.throttle) * (this.contactSteeringTime > 0 ? CONTACT_STEERING : LOW_SPEED_STEERING)
+      : clamp(steerSpeed / (FULL_STEERING_SPEED - STEERING_DEADBAND), -1, 1)) * (1 - 0.31 * speedRatio)
     this.heading += controls.steer * steering * (controls.handbrake ? 4.8 : 3.6) * dt
 
     forward.x = Math.cos(this.heading)
@@ -85,6 +91,8 @@ export class Car {
         }
       }
     }
+    // Keep pivot authority through the brief gaps between rebounds.
+    if (impact > 0) this.contactSteeringTime = CONTACT_STEERING_GRACE
     if (impact > 12) {
       if (!this.contactCooldown) this.collisions++
       this.contactCooldown = 0.14

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Restored low-speed steering with throttle or reverse held so cars can turn free of props and table edges.
 - Corrected the car direction frames and added smooth rotation between them for both the car and its silhouette shadow. Tightened cornering grip, reduced chase camera lead, and suppressed low-speed steering jitter from rebounds.
 - Enlarged stationary and walking ants to 2× with nearest-neighbor rendering and matching silhouette shadows. Their placement bounds keep them clear of props, the lane, and each other.
 
