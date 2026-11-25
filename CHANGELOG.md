@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.2
+
+- Published the game at https://tabletop-racer.vercel.app from the public GitHub repo https://github.com/Ashe-Oro/tabletop-racer. Pushes to `main` deploy to production.
+
 ## 3.0.1
 
 - Added 35% black silhouette shadows under props and cars. Direction-sheet shadows follow the active frame and stay on the ground as the car bounces.

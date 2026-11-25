@@ -1,5 +1,9 @@
 # Tabletop Racer v3
 
+Play the current build at [tabletop-racer.vercel.app](https://tabletop-racer.vercel.app/).
+Pushes to `main` on [Ashe-Oro/tabletop-racer](https://github.com/Ashe-Oro/tabletop-racer)
+deploy there automatically.
+
 Drive a 24-pixel toy car around a picnic table in a three-lap time trial. Open
 [the offline release](releases/tabletop-racer.html) directly in a desktop
 browser. The game and artwork are embedded in that file.
@@ -51,3 +55,9 @@ The asset tools require Python 3, Pillow, and NumPy. See the
 - [Picnic gameplay close-up](media/11-v3-art-ingame.png)
 - [Four car selections](media/12-v3-car-select.png)
 - [Driving and drifting clip](media/gameplay-v3.mp4)
+
+## License
+
+This project is released under the MIT License. The sprite-stacking tools in
+`tools/sprite-stacking/` are MIT-licensed work by Daniel White; that
+copyright and permission notice is preserved in `tools/sprite-stacking/LICENSE`.
