@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121613">
+  <title>Tabletop Racer</title>
+</head>
+<body>
+  <main class="cabinet">
+    <header class="masthead">
+      <div class="title-group">
+        <span class="flag-mark" aria-hidden="true"></span>
+        <h1>Tabletop Racer</h1>
+      </div>
+      <div class="track-name"><span class="status-light"></span> Kitchen Circuit</div>
+    </header>
+    <div class="layout">
+      <section class="play" aria-label="Race">
+        <div class="hud" aria-live="off">
+          <div class="hud-cell"><span>Lap</span><output id="lap">01 <small>/ 03</small></output></div>
+          <div class="hud-cell"><span>Lap time</span><output id="time">0:00.000</output></div>
+          <div class="hud-cell hud-best"><span>Best lap</span><output id="best">—</output></div>
+          <div class="hud-cell speed"><span>Speed</span><output id="speed">000</output><span id="gear">FWD</span></div>
+        </div>
+        <div class="viewport">
+          <canvas id="race" aria-label="Top-down view of the tabletop circuit"></canvas>
+          <p id="load" role="status">Loading circuit…</p>
+          <div class="finish" id="finish" role="status" hidden>
+            <div class="finish-card">
+              <span class="flag-mark" aria-hidden="true"></span>
+              <h2>Race complete</h2>
+              <div class="finish-times">
+                <div><span>Total time</span><strong id="finish-total"></strong></div>
+                <div><span>Best lap</span><strong id="finish-best"></strong></div>
+              </div>
+              <p>Press <kbd>R</kbd> to Race Again</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <aside class="pit" aria-label="Circuit and lap records">
+        <section class="pit-section">
+          <h2>Circuit map</h2>
+          <canvas id="map" width="208" height="132" aria-label="Circuit map showing the car and next checkpoint"></canvas>
+          <div class="map-key"><span><i></i> Car</span><span><i></i> Next gate</span></div>
+        </section>
+        <section class="pit-section splits">
+          <h2>Lap splits</h2>
+          <ol>
+            <li><span>Lap 01</span><output id="split-1">—</output></li>
+            <li><span>Lap 02</span><output id="split-2">—</output></li>
+            <li><span>Lap 03</span><output id="split-3">—</output></li>
+          </ol>
+        </section>
+        <div class="gate-status"><span>Checkpoints</span><output id="gates">0 / 8</output></div>
+      </aside>
+    </div>
+    <footer class="controls" aria-label="Keyboard controls">
+      <div><kbd>W A S D</kbd><span class="or">/</span><kbd>↑ ← ↓ →</kbd> Drive</div>
+      <div><kbd>Space</kbd><span class="or">/</span><kbd>Shift</kbd> Drift</div>
+      <button id="restart" type="button"><kbd>R</kbd> Restart</button>
+    </footer>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
