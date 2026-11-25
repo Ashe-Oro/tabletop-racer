@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { BEST_LAP_KEY, Race, gateCrossing, readBestLap } from './race'
+import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, gateCrossing, raceCountdown, raceProgress, rankRacers, readBestLap } from './race'
 import type { Gate } from './race'
+import { gates as circuitGates, gridSlot, progressWithinCheckpoint, ROUTE_LENGTH, sampleRoute } from './track'
 
 const line = (x: number): Gate => ({ x, y: 0, forward: { x: 1, y: 0 }, halfWidth: 15 })
 const gates = [line(0), line(100), line(200), line(300)]
@@ -71,5 +72,57 @@ describe('race checkpoints', () => {
     for (const value of ['-1', 'NaN', '1.5', '', null]) {
       expect(readBestLap({ getItem: () => value })).toBeNull()
     }
+  })
+})
+
+describe('race standings', () => {
+  it('orders the staggered grid behind racers that have crossed the line', () => {
+    const grid = Array.from({ length: 4 }, (_, index) => ({
+      index, race: new Race(circuitGates, null), progress: progressWithinCheckpoint(gridSlot(index), 0),
+    }))
+    const started = { index: 4, race: new Race(circuitGates, null), progress: progressWithinCheckpoint(sampleRoute(10), 0) }
+    expect(grid.every(entry => entry.progress < 0)).toBe(true)
+    expect(rankRacers([grid[3], grid[1], started, grid[2], grid[0]]).map(({ index }) => index))
+      .toEqual([4, 0, 1, 2, 3])
+    expect(raceProgress(grid[0], ROUTE_LENGTH)).toBeCloseTo(-20)
+  })
+
+  it('sorts by completed lap, validated checkpoint, then fractional progress', () => {
+    const entry = (lap: number, checkpoint: number, progress: number) => {
+      const race = new Race(gates, null)
+      for (let i = 1; i < lap; i++) completeLap(race)
+      race.checkpoint = checkpoint
+      return { race, progress }
+    }
+    const lapDown = entry(1, 3, 390)
+    const early = entry(2, 1, 110)
+    const later = entry(2, 1, 175)
+    const checkpointAhead = entry(2, 2, 200)
+    expect(rankRacers([lapDown, later, checkpointAhead, early])).toEqual([checkpointAhead, later, early, lapDown])
+    expect(raceProgress(later, 400)).toBe(575)
+    expect(progressWithinCheckpoint(sampleRoute(300), circuitGates.length - 1)).toBe(ROUTE_LENGTH)
+  })
+
+  it('orders finished racers by exact crossing time, including in the same tick', () => {
+    const finalCrossing = (start: number) => {
+      const race = new Race(gates, null)
+      completeLap(race)
+      completeLap(race)
+      for (const x of [100, 200, 300]) cross(race, x)
+      race.step({ x: start, y: 0 }, { x: 1, y: 0 }, 8)
+      return { race, progress: 0 }
+    }
+    const faster = finalCrossing(-1)
+    const slower = finalCrossing(-3)
+    const racing = { race: new Race(gates, null), progress: 100 }
+    expect(faster.race.elapsedMs).toBe(slower.race.elapsedMs)
+    expect(faster.race.finishTimeMs).toBe(5504)
+    expect(slower.race.finishTimeMs).toBe(5506)
+    expect(rankRacers([racing, slower, faster])).toEqual([faster, slower, racing])
+  })
+
+  it('shows each countdown beat and unlocks on GO', () => {
+    expect([0, 1, 2, 3, 4].map(beat => raceCountdown(beat * COUNTDOWN_BEAT)))
+      .toEqual([3, 2, 1, 'GO!', null])
   })
 })

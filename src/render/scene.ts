@@ -7,6 +7,7 @@ import type { Assets, FlatAsset } from './assets'
 import { DirectionSprite } from './direction'
 import type { TireEffects } from './effects'
 import { FlatSprite } from './flat'
+import { drawHeadingMarker, spreadMarkers } from './marker'
 import { SQUASH, StackSprite, carTurn } from './stack'
 import type { Table } from './table'
 
@@ -21,6 +22,12 @@ interface SceneryItem {
   y: number
   angle: number
   sprite: FlatSprite | StackSprite
+}
+
+interface Vehicle {
+  car: Car
+  carIndex: number
+  effects: TireEffects
 }
 
 export function viewportScale(width: number, height: number) {
@@ -65,11 +72,12 @@ export class Scene {
     this.walkingAnts = this.scenery.filter(({ prop, sprite }) => prop.asset === 'ant_walk' && sprite instanceof FlatSprite)
   }
 
-  resetCamera() {
-    this.camera = { x: spawn.x, y: spawn.y }
+  resetCamera(car: Car) {
+    this.camera = { ...car.position }
   }
 
-  draw(car: Car, carIndex: number, effects: TireEffects, dt: number, overview: boolean) {
+  draw(racers: readonly Vehicle[], dt: number, overview: boolean) {
+    const { car } = racers[0]
     const { canvas, ctx } = this
     const width = Math.max(1, canvas.clientWidth)
     const height = Math.max(1, canvas.clientHeight)
@@ -95,7 +103,7 @@ export class Scene {
     const left = Math.round(width / 2 - centerX * scale)
     const top = Math.round(height / 2 - centerY * scale)
     this.table.draw(ctx, left, top, scale, width, height)
-    effects.draw(ctx, left, top, scale)
+    for (const { effects } of racers) effects.draw(ctx, left, top, scale)
 
     this.sceneryTime += dt
     for (const ant of this.walkingAnts) {
@@ -106,21 +114,23 @@ export class Scene {
       ant.y = prop.y + Math.sin(prop.angle) * distance
       ant.angle = prop.angle + (phase >= 1 ? Math.PI : 0)
     }
-    if (this.walkingAnts.length) this.scenery.sort((a, b) => a.y - b.y)
 
-    const vehicle = this.vehicles[carIndex]
-    if (vehicle instanceof DirectionSprite) {
-      vehicle.setHeading(car.heading)
-    } else {
-      const turn = Math.round(carTurn(car.heading) / TURN_STEP)
-      const wrapped = ((turn % TURN_STEPS) + TURN_STEPS) % TURN_STEPS
-      if (this.turns[carIndex] !== wrapped) {
-        vehicle.bake(wrapped * TURN_STEP)
-        this.turns[carIndex] = wrapped
+    // Each active livery has its own sprite, heading cache, and shadow.
+    const stacks = racers.map(({ car, carIndex }) => {
+      const sprite = this.vehicles[carIndex]
+      if (sprite instanceof DirectionSprite) {
+        sprite.setHeading(car.heading)
+      } else {
+        const turn = Math.round(carTurn(car.heading) / TURN_STEP)
+        const wrapped = ((turn % TURN_STEPS) + TURN_STEPS) % TURN_STEPS
+        if (this.turns[carIndex] !== wrapped) {
+          sprite.bake(wrapped * TURN_STEP)
+          this.turns[carIndex] = wrapped
+        }
       }
-    }
-    const stack = { ...car.position, sprite: vehicle, angle: car.heading }
-    const drawSprite = (item: SceneryItem | typeof stack, layer: 'shadow' | 'body', lift = 0) => {
+      return { ...car.position, sprite, angle: car.heading, lift: car.bump }
+    })
+    const drawSprite = (item: SceneryItem | typeof stacks[number], layer: 'shadow' | 'body') => {
       const x = left + item.x * scale
       const y = top + item.y * SQUASH * scale
       if (x < -160 * scale || x > width + 160 * scale || y < -125 * scale || y > height + 165 * scale) return
@@ -128,20 +138,32 @@ export class Scene {
         const isAnt = 'prop' in item && (item.prop.asset === 'ant' || item.prop.asset === 'ant_walk')
         item.sprite.draw(ctx, x, y, scale * (isAnt ? ANT_SCALE : 1), layer, item.angle, this.sceneryTime + item.x / 19)
       } else {
-        item.sprite.draw(ctx, x, y, scale, layer, lift)
+        item.sprite.draw(ctx, x, y, scale, layer, 'lift' in item ? item.lift : 0)
       }
     }
-    for (const item of this.scenery) drawSprite(item, 'shadow')
-    drawSprite(stack, 'shadow')
-    // Insert the car at its ground contact for depth ordering.
-    let carDrawn = false
-    for (const item of this.scenery) {
-      if (!carDrawn && item.y > stack.y) {
-        drawSprite(stack, 'body', car.bump)
-        carDrawn = true
+    const bodies = [...this.scenery, ...stacks].sort((a, b) => a.y - b.y)
+    for (const item of bodies) drawSprite(item, 'shadow')
+    for (const item of bodies) drawSprite(item, 'body')
+
+    if (overview) {
+      const positions = racers.map(({ car }) => ({
+        x: left + car.position.x * scale,
+        y: top + car.position.y * SQUASH * scale,
+      }))
+      const markers = spreadMarkers(positions, 15)
+      ctx.beginPath()
+      markers.forEach((marker, i) => {
+        ctx.moveTo(positions[i].x, positions[i].y)
+        ctx.lineTo(marker.x, marker.y)
+      })
+      ctx.strokeStyle = '#1a1210'
+      ctx.lineWidth = 1
+      ctx.stroke()
+      for (let i = racers.length - 1; i >= 0; i--) {
+        const { car, carIndex } = racers[i]
+        const heading = Math.atan2(Math.sin(car.heading) * SQUASH, Math.cos(car.heading))
+        drawHeadingMarker(ctx, markers[i].x, markers[i].y, heading, cars[carIndex].color, i === 0 ? 8 : 6)
       }
-      drawSprite(item, 'body')
     }
-    if (!carDrawn) drawSprite(stack, 'body', car.bump)
   }
 }

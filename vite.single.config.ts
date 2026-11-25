@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
+import { versionDefine } from './vite.version.ts'
 
 const embeddedAssetsId = 'virtual:tabletop-racer-assets'
 const assetRoot = new URL('./public/assets/', import.meta.url)
@@ -10,6 +11,7 @@ function pngDataUrl(path: string): string {
 }
 
 export default defineConfig({
+  define: versionDefine,
   publicDir: false,
   resolve: {
     alias: { './asset-source': embeddedAssetsId },

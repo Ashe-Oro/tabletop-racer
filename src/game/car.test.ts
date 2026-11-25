@@ -155,3 +155,43 @@ describe('picnic-scale car', () => {
     expect(car.speed).toBeCloseTo(95)
   })
 })
+
+describe('temporary car effects', () => {
+  it('raises the speed cap during a boost and restores it when the timer expires', () => {
+    const car = new Car()
+    car.heading = 0
+    car.velocity = { x: 270, y: 0 }
+    car.setBoost(1.2, 0.5)
+    for (let i = 0; i < 40; i++) car.step(dt, { ...idle, throttle: 1 }, [])
+    expect(car.speed).toBeCloseTo(324)
+    for (let i = 0; i < 22; i++) car.step(dt, { ...idle, throttle: 1 }, [])
+    expect(car.speed).toBeCloseTo(270)
+    expect(car.boostMultiplier).toBe(1)
+    expect(car.boostTimer).toBe(0)
+  })
+
+  it('spins, reduces traction, and returns steering control on expiry', () => {
+    const car = new Car()
+    const baseline = new Car()
+    const controls = { ...idle, throttle: 1 }
+    const velocity = { x: 200, y: 80 }
+    car.velocity = { ...velocity }
+    baseline.velocity = { ...velocity }
+    baseline.heading = car.heading + 9 * dt
+    const heading = car.heading
+    car.spinOut(3 * dt)
+    car.step(dt, controls, [])
+    baseline.step(dt, controls, [])
+    expect(car.heading).toBeGreaterThan(heading)
+    expect(Math.abs(car.slip)).toBeGreaterThan(Math.abs(baseline.slip))
+    const along = (vehicle: Car) =>
+      vehicle.velocity.x * Math.cos(vehicle.heading) + vehicle.velocity.y * Math.sin(vehicle.heading)
+    expect(along(car)).toBeLessThan(along(baseline))
+    for (let i = 0; i < 3; i++) car.step(dt, controls, [])
+    expect(car.spinTimer).toBe(0)
+    const releasedHeading = car.heading
+    car.step(dt, { ...controls, steer: 1 }, [])
+    expect(car.heading - releasedHeading).toBeGreaterThan(0)
+    expect(car.heading - releasedHeading).toBeLessThan(4 * dt)
+  })
+})

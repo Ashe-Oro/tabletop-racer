@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 3.1.0 — AI Rivals
 
+- Made four-car Race the default with a staggered starting grid, a 3–2–1–GO countdown, live position, and standings that update as each car finishes. Time Trial starts on throttle and keeps the same saved best lap.
+- Added three rivals that use the player’s driving physics. They choose passing lanes, brake for corners, avoid traffic and props, reverse out of stalls, and adjust pace to the player’s progress.
+- Added car-to-car bumps and future boost and spin-out hooks. All cars cast silhouette shadows, depth-sort with scenery, and can leave skid marks and dust.
+- Added rival markers and a player heading arrow to the minimap, visible car markers in Overview, and the build version and commit in the footer.
 - Restored low-speed steering with throttle or reverse held so cars can turn free of props and table edges.
 - Corrected the car direction frames and added smooth rotation between them for both the car and its silhouette shadow. Tightened cornering grip, reduced chase camera lead, and suppressed low-speed steering jitter from rebounds.
 - Enlarged stationary and walking ants to 2× with nearest-neighbor rendering and matching silhouette shadows. Their placement bounds keep them clear of props, the lane, and each other.

@@ -1,7 +1,18 @@
 import type { Car } from '../game/car'
-import type { Race } from '../game/race'
+import { cars } from '../game/cars'
+import type { Countdown, Race } from '../game/race'
 import { TABLE_HEIGHT, TABLE_WIDTH, gates, route } from '../game/track'
 import { makeCanvas } from './assets'
+import { paintCountdown } from './countdown'
+import { drawHeadingMarker, spreadMarkers } from './marker'
+
+interface HudRacer {
+  car: Car
+  race: Race
+  carIndex: number
+}
+
+const place = ['1st', '2nd', '3rd', '4th']
 
 export function element<T extends HTMLElement>(id: string): T {
   const item = document.getElementById(id)
@@ -23,6 +34,10 @@ function show(target: HTMLElement, text: string) {
 
 export class Hud {
   private readonly lap = element('lap').firstChild!
+  private readonly position = element('position')
+  private readonly countdown = element('countdown')
+  private readonly countdownContext = element<HTMLCanvasElement>('countdown-glyph').getContext('2d')!
+  private shownCountdown: Countdown = null
   private readonly time = element('time')
   private readonly best = element('best')
   private readonly speed = element('speed')
@@ -32,6 +47,8 @@ export class Hud {
   private readonly finish = element('finish')
   private readonly finishTotal = element('finish-total')
   private readonly finishBest = element('finish-best')
+  private readonly standings = element('standings')
+  private readonly mapKey = element('map-player')
   private readonly map = element<HTMLCanvasElement>('map')
   private readonly mapContext = this.map.getContext('2d')!
   private readonly mapBase = makeCanvas(this.map.width, this.map.height)
@@ -40,6 +57,17 @@ export class Hud {
   private readonly my = (y: number) => this.map.height / 2 + (y - TABLE_HEIGHT / 2) * this.mapScale
 
   constructor() {
+    for (const label of place) {
+      const row = document.createElement('li')
+      const position = document.createElement('strong')
+      position.textContent = label
+      const swatch = document.createElement('i')
+      const name = document.createElement('span')
+      const time = document.createElement('span')
+      time.className = 'standing-time'
+      row.append(position, swatch, name, time)
+      this.standings.append(row)
+    }
     const { ctx, canvas } = this.mapBase
     ctx.fillStyle = '#1a1210'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -62,7 +90,18 @@ export class Hud {
     ctx.fillRect(-1, -5, 2, 10)
   }
 
-  draw(car: Car, race: Race) {
+  draw(racers: readonly HudRacer[], ranks: readonly HudRacer[], countdown: Countdown, position: number | null) {
+    const { car, race, carIndex } = racers[0]
+    show(this.position, position === null ? '—' : place[position - 1])
+    this.position.classList.toggle('leading', position === 1)
+    if (countdown !== this.shownCountdown) {
+      this.shownCountdown = countdown
+      this.countdown.hidden = countdown === null
+      if (countdown !== null) {
+        this.countdown.setAttribute('aria-label', String(countdown))
+        paintCountdown(this.countdownContext, countdown)
+      }
+    }
     this.lap.nodeValue = `0${race.lap} `
     show(this.time, formatTime(race.lapElapsedMs))
     show(this.best, formatTime(race.bestLapMs))
@@ -75,8 +114,17 @@ export class Hud {
 
     this.finish.hidden = !race.finished
     if (race.finished) {
-      show(this.finishTotal, formatTime(race.elapsedMs))
+      show(this.finishTotal, formatTime(race.finishTimeMs))
       show(this.finishBest, formatTime(race.bestLapMs))
+      this.standings.hidden = position === null
+      if (position !== null) ranks.forEach((racer, i) => {
+        const { name, color } = cars[racer.carIndex]
+        const row = this.standings.children[i]
+        const [, swatch, label, time] = Array.from(row.children) as HTMLElement[]
+        swatch.style.backgroundColor = color
+        show(label, racer === racers[0] ? `${name} (you)` : name)
+        show(time, racer.race.finishTimeMs === null ? 'Racing…' : formatTime(racer.race.finishTimeMs))
+      })
     }
 
     const ctx = this.mapContext
@@ -86,11 +134,20 @@ export class Hud {
       ctx.fillStyle = '#2a8f8a'
       ctx.fillRect(Math.round(this.mx(next.x)) - 2, Math.round(this.my(next.y)) - 2, 5, 5)
     }
-    const x = Math.round(this.mx(car.position.x))
-    const y = Math.round(this.my(car.position.y))
-    ctx.fillStyle = '#1a1210'
-    ctx.fillRect(x - 3, y - 3, 7, 7)
-    ctx.fillStyle = '#e23a2b'
-    ctx.fillRect(x - 2, y - 2, 5, 5)
+    const markers = spreadMarkers(racers.map(({ car }) => ({
+      x: this.mx(car.position.x),
+      y: this.my(car.position.y),
+    })), 10)
+    racers.slice(1).forEach((rival, index) => {
+      const x = Math.round(markers[index + 1].x)
+      const y = Math.round(markers[index + 1].y)
+      ctx.fillStyle = '#1a1210'
+      ctx.fillRect(x - 3, y - 3, 7, 7)
+      ctx.fillStyle = cars[rival.carIndex].color
+      ctx.fillRect(x - 2, y - 2, 5, 5)
+    })
+    const color = cars[carIndex].color
+    this.mapKey.style.backgroundColor = color
+    drawHeadingMarker(ctx, markers[0].x, markers[0].y, car.heading, color, 7)
   }
 }

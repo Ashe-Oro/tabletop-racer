@@ -1,5 +1,6 @@
 import { overlaps } from './collision'
 import type { Circle, Solid } from './collision'
+import { clamp, dot, delta } from './geometry'
 import type { Footprint, Point } from './geometry'
 import type { Gate } from './race'
 
@@ -45,13 +46,82 @@ const segments = route.map((p, i) => {
 })
 export const ROUTE_LENGTH = segments.reduce((total, length) => total + length, 0)
 
+const distances = [0]
+for (const length of segments) distances.push(distances[distances.length - 1] + length)
+
+export function sampleRoute(distance: number, laneOffset = 0) {
+  distance = ((distance % ROUTE_LENGTH) + ROUTE_LENGTH) % ROUTE_LENGTH
+  let low = 0
+  let high = route.length
+  while (low + 1 < high) {
+    const mid = (low + high) >>> 1
+    if (distances[mid] <= distance) low = mid
+    else high = mid
+  }
+  const a = route[low]
+  const b = route[(low + 1) % route.length]
+  const t = (distance - distances[low]) / segments[low]
+  const forward = {
+    x: a.forward.x + (b.forward.x - a.forward.x) * t,
+    y: a.forward.y + (b.forward.y - a.forward.y) * t,
+  }
+  return {
+    x: a.x + (b.x - a.x) * t - forward.y * laneOffset,
+    y: a.y + (b.y - a.y) * t + forward.x * laneOffset,
+    forward,
+  }
+}
+
+export function projectRoute(point: Point): number {
+  let closest = Infinity
+  let distance = 0
+  for (let i = 0; i < route.length; i++) {
+    const a = route[i]
+    const b = route[(i + 1) % route.length]
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const x = point.x - a.x
+    const y = point.y - a.y
+    const length = segments[i]
+    const t = clamp((x * dx + y * dy) / (length * length), 0, 1)
+    const error = (x - dx * t) ** 2 + (y - dy * t) ** 2
+    if (error >= closest) continue
+    closest = error
+    distance = distances[i] + length * t
+  }
+  return distance
+}
+
 // Pad the circles so they cover the full lane between samples.
 const laneRadius = Math.hypot(TRACK_HALF_WIDTH, Math.max(...segments) / 2)
 const lane = route.map(({ x, y }) => ({ x, y, radius: laneRadius }))
 
-export const gates: Gate[] = [0, 2, 4, 6, 7, 8, 10, 11, 13, 14].map(corner => ({
-  ...route[corner * SUBDIVISIONS], halfWidth: 244,
-}))
+const gateIndices = [0, 2, 4, 6, 7, 8, 10, 11, 13, 14].map(corner => corner * SUBDIVISIONS)
+export const gates: Gate[] = gateIndices.map(index => ({ ...route[index], halfWidth: 244 }))
+export const gateDistances = gateIndices.map(index => distances[index])
+
+export function gridSlot(index: number) {
+  const gate = gates[0]
+  const lane = index % 2 === 0 ? -20 : 20
+  const back = 20 + Math.floor(index / 2) * 33 + (index % 2) * 5
+  return {
+    x: gate.x - gate.forward.x * back - gate.forward.y * lane,
+    y: gate.y - gate.forward.y * back + gate.forward.x * lane,
+    heading: Math.atan2(gate.forward.y, gate.forward.x),
+  }
+}
+
+export function progressWithinCheckpoint(position: Point, checkpoint: number, projected = projectRoute(position)): number {
+  const start = gateDistances[checkpoint]
+  const end = gateDistances[checkpoint + 1] ?? ROUTE_LENGTH
+  const middle = (start + end) / 2
+  // Choose the wrapped copy closest to the validated checkpoint interval.
+  const distance = projected + Math.round((middle - projected) / ROUTE_LENGTH) * ROUTE_LENGTH
+  if (checkpoint === 0 && distance < 0) {
+    return Math.min(0, dot(delta(position, gates[0]), gates[0].forward))
+  }
+  return clamp(distance, start, end)
+}
 
 export const spawn = {
   x: gates[0].x + 22 * gates[0].forward.x,

@@ -74,7 +74,7 @@ h1 {
 .hud {
   position: relative;
   display: grid;
-  grid-template-columns: .8fr 1.1fr 1.1fr .85fr;
+  grid-template-columns: .8fr .75fr 1.1fr 1.1fr .85fr;
   border: 1px solid var(--teal);
   box-shadow: 1px 1px var(--muted);
 }
@@ -101,7 +101,7 @@ h1 {
   white-space: nowrap;
 }
 .hud-cell small { color: var(--muted); font-size: .59em; }
-.hud-best output, .hud-best > span:first-child { color: var(--gold); }
+.hud-best output, .hud-best > span:first-child, #position.leading { color: var(--gold); }
 .speed { position: relative; }
 #gear { position: absolute; bottom: 11px; right: 12px; font-size: 10px; font-weight: bold; color: var(--muted); }
 #gear.drifting { color: var(--gold); }
@@ -120,14 +120,14 @@ canvas { display: block; image-rendering: pixelated; }
 .pit h2 { margin: 0 0 12px; }
 .map-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
 .map-heading h2 { margin: 0; }
-#overview, #car-select button {
+#overview, #car-select button, .modes button, #race-again {
   cursor: pointer;
   background: #30241f;
   color: var(--cream);
   border: 1px solid var(--rim);
 }
 #overview { font-size: 10px; padding: 4px 5px; }
-#overview[aria-pressed="true"] { border-color: var(--teal); background: #315451; }
+#overview[aria-pressed="true"], .modes button[aria-pressed="true"] { border-color: var(--teal); background: #315451; }
 #car-name { display: block; font-weight: bold; margin-bottom: 9px; }
 #car-select { display: grid; grid-template-columns: repeat(4, minmax(24px, 1fr)); gap: 5px; }
 #car-select button { padding: 3px 0; border-bottom: 3px solid var(--car-color); font-size: 12px; }
@@ -135,6 +135,7 @@ canvas { display: block; image-rendering: pixelated; }
 #map { width: 100%; height: auto; background: var(--ink); border: 1px solid var(--rim); }
 .map-key { display: flex; justify-content: space-between; gap: 5px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .map-key i { display: inline-block; width: 7px; height: 7px; margin-right: 2px; background: var(--red); }
+.map-key #map-player { clip-path: polygon(0 0, 100% 50%, 0 100%, 22% 50%); }
 .map-key span + span i { background: var(--teal); }
 .splits ol { padding: 0; margin: 0; list-style: none; }
 .splits li, .gate-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
@@ -164,6 +165,23 @@ kbd {
 }
 button:hover, button:focus-visible { color: var(--cream); }
 
+.modes { display: flex; gap: 5px; }
+.modes button { font-size: 11px; padding: 5px; flex: 1; }
+.version { white-space: nowrap; }
+
+.countdown {
+  position: absolute;
+  top: 32%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 7px;
+  border: 1px solid var(--teal);
+  background: var(--ink);
+  box-shadow: 1px 1px var(--muted);
+  pointer-events: none;
+}
+.countdown canvas { width: 126px; height: 54px; }
+
 .finish {
   position: absolute;
   inset: 0;
@@ -174,14 +192,14 @@ button:hover, button:focus-visible { color: var(--cream); }
 }
 [hidden] { display: none !important; }
 .finish-card {
-  padding: clamp(16px, 4vw, 40px);
+  padding: clamp(12px, 2.5vmin, 30px);
   border: 1px solid var(--teal);
   background: var(--ink);
   text-align: center;
   box-shadow: 1px 1px var(--muted);
 }
 .finish-card h2 {
-  margin: 10px 0 23px;
+  margin: 6px 0 12px;
   color: var(--muted);
   font-size: clamp(22px, 4vw, 38px);
   text-transform: uppercase;
@@ -189,7 +207,25 @@ button:hover, button:focus-visible { color: var(--cream); }
 .finish-times { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px 25px; }
 .finish-times > div { display: grid; gap: 8px; }
 .finish-times strong { color: var(--gold); font-size: clamp(19px, 3vw, 28px); }
-.finish-card p { margin: 25px 0 0; color: var(--muted); font-size: 12px; }
+.standings {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  font-size: 13px;
+}
+.standings li {
+  display: grid;
+  grid-template-columns: 3ch 8px 1fr 8ch;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--rim);
+  text-align: left;
+}
+.standings li:first-child strong { color: var(--gold); }
+.standings i { width: 8px; height: 8px; }
+.standing-time { text-align: right; white-space: nowrap; }
+#race-again { margin-top: 12px; padding: 4px 10px; font-size: 12px; }
 
 @media (max-width: 1000px) {
   .layout { grid-template-columns: minmax(0, 1fr) 181px; }
@@ -213,4 +249,12 @@ button:hover, button:focus-visible { color: var(--cream); }
 
 @media (max-width: 669px) {
   .viewport { height: clamp(300px, 66vh, 660px); }
+}
+
+@media (max-width: 420px) {
+  .hud-cell { padding-inline: 5px; }
+  .hud-cell > span:first-child { font-size: 9px; letter-spacing: 0; }
+  .hud-cell output { font-size: 14px; }
+  #gear { font-size: 8px; }
+  .finish-card .flag-mark { display: none; }
 }

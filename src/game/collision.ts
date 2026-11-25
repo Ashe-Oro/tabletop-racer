@@ -1,3 +1,5 @@
+import type { Car } from './car'
+import { WHEEL_CENTERS } from './cars'
 import { clamp, dot } from './geometry'
 import type { Point } from './geometry'
 
@@ -98,4 +100,61 @@ export function overlaps(a: Solid, b: Solid, gap: number): boolean {
     a.halfWidth * Math.abs(dot(ax, axis)) + a.halfLength * Math.abs(dot(ay, axis)) +
     b.halfWidth * Math.abs(dot(bx, axis)) + b.halfLength * Math.abs(dot(by, axis)) + gap,
   )
+}
+
+/** Solve equal-mass contacts between the three circles along each chassis. */
+export function resolveCarCollisions(cars: readonly Car[]) {
+  const bodies = cars.map(car => {
+    const x = Math.cos(car.heading)
+    const y = Math.sin(car.heading)
+    return WHEEL_CENTERS.map(offset => ({ x: x * offset, y: y * offset }))
+  })
+  for (let pass = 0; pass < 4; pass++) {
+    let separated = false
+    for (let i = 0; i < cars.length; i++) {
+      const a = cars[i]
+      for (let j = i + 1; j < cars.length; j++) {
+        const b = cars[j]
+        const dx = a.position.x - b.position.x
+        const dy = a.position.y - b.position.y
+        const radius = a.radius + b.radius
+        if (Math.hypot(dx, dy) >= a.axle + b.axle + radius) continue
+
+        let contact: Contact | undefined
+        for (const offsetA of bodies[i]) {
+          for (const offsetB of bodies[j]) {
+            const x = dx + offsetA.x - offsetB.x
+            const y = dy + offsetA.y - offsetB.y
+            const distance = Math.hypot(x, y)
+            const depth = radius - distance
+            if (depth <= (contact?.depth ?? 0)) continue
+            const centerDistance = Math.hypot(dx, dy)
+            const normal = distance > 1e-8 ? { x: x / distance, y: y / distance }
+              : centerDistance > 1e-8 ? { x: dx / centerDistance, y: dy / centerDistance }
+                : { x: -Math.sin(a.heading), y: Math.cos(a.heading) }
+            contact = { normal, depth }
+          }
+        }
+        if (!contact) continue
+        separated = true
+        const { normal, depth } = contact
+        const push = (depth + 0.03) / 2
+        a.position.x += normal.x * push
+        a.position.y += normal.y * push
+        b.position.x -= normal.x * push
+        b.position.y -= normal.y * push
+
+        const incoming = dot({ x: a.velocity.x - b.velocity.x, y: a.velocity.y - b.velocity.y }, normal)
+        if (incoming >= 0) continue
+        const impulse = -(1 + 0.48) * incoming / 2
+        a.velocity.x += normal.x * impulse
+        a.velocity.y += normal.y * impulse
+        b.velocity.x -= normal.x * impulse
+        b.velocity.y -= normal.y * impulse
+        a.registerImpact(-incoming / 2)
+        b.registerImpact(-incoming / 2)
+      }
+    }
+    if (!separated) break
+  }
 }

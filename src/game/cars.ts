@@ -9,3 +9,4 @@ export type CarId = typeof cars[number]['id']
 export const CAR_LENGTH = 24
 export const CAR_AXLE = 6.7
 export const CAR_RADIUS = 6
+export const WHEEL_CENTERS = [-CAR_AXLE, 0, CAR_AXLE] as const

@@ -27,6 +27,7 @@ export class Race {
   bestLapMs: number | null
   checkpoint = 0
   elapsedMs = 0
+  finishTimeMs: number | null = null
   private lapStartMs = 0
 
   constructor(readonly gates: readonly Gate[], bestLapMs: number | null) {
@@ -49,6 +50,13 @@ export class Race {
         this.lapTimesMs.push(time)
         this.bestLapMs = Math.min(this.bestLapMs ?? Infinity, time)
         this.lapStartMs = this.elapsedMs
+        if (this.finished) {
+          const gate = this.gates[0]
+          const before = dot(delta(from, gate), gate.forward)
+          const after = dot(delta(to, gate), gate.forward)
+          // Resolve finishes within the same physics tick in crossing order.
+          this.finishTimeMs = this.elapsedMs - dtMs * after / (after - before)
+        }
       }
       this.checkpoint = 0
       return
@@ -65,4 +73,33 @@ export class Race {
 export function readBestLap(storage: Pick<Storage, 'getItem'>): number | null {
   const ms = Number(storage.getItem(BEST_LAP_KEY))
   return Number.isSafeInteger(ms) && ms > 0 ? ms : null
+}
+
+export type RaceMode = 'race' | 'time-trial'
+export type Countdown = 3 | 2 | 1 | 'GO!' | null
+export const COUNTDOWN_BEAT = 0.65
+
+export function raceCountdown(elapsed: number): Countdown {
+  return ([3, 2, 1, 'GO!'] as const)[Math.floor(elapsed / COUNTDOWN_BEAT)] ?? null
+}
+
+export interface RaceEntry {
+  race: Race
+  progress: number
+}
+
+export function raceProgress(entry: RaceEntry, lapLength: number): number {
+  return entry.race.lapTimesMs.length * lapLength + entry.progress
+}
+
+export function rankRacers<T extends RaceEntry>(racers: readonly T[]): T[] {
+  return [...racers].sort((a, b) => {
+    const aFinish = a.race.finishTimeMs
+    const bFinish = b.race.finishTimeMs
+    if (aFinish !== null && bFinish !== null) return aFinish - bFinish
+    if (aFinish !== null) return -1
+    if (bFinish !== null) return 1
+    return b.race.lapTimesMs.length - a.race.lapTimesMs.length
+      || b.race.checkpoint - a.race.checkpoint || b.progress - a.progress
+  })
 }

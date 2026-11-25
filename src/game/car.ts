@@ -3,7 +3,7 @@ import type { Solid } from './collision'
 import { clamp, dot } from './geometry'
 import type { Point } from './geometry'
 import { spawn, TABLE_HEIGHT, TABLE_WIDTH } from './track'
-import { CAR_AXLE, CAR_RADIUS } from './cars'
+import { CAR_AXLE, CAR_RADIUS, WHEEL_CENTERS } from './cars'
 
 const TOP_SPEED = 270
 const STEERING_DEADBAND = 8
@@ -11,7 +11,6 @@ const FULL_STEERING_SPEED = 60
 const LOW_SPEED_STEERING = 0.04
 const CONTACT_STEERING = 1.7
 const CONTACT_STEERING_GRACE = 0.06
-const WHEEL_CENTERS = [-CAR_AXLE, 0, CAR_AXLE]
 
 export interface Controls {
   throttle: number
@@ -27,6 +26,10 @@ export class Car {
   collisions = 0
   slip = 0
   drifting = false
+  boostMultiplier = 1
+  boostTimer = 0
+  speedScale = 1
+  spinTimer = 0
   private contactCooldown = 0
   private contactSteeringTime = 0
   readonly axle = CAR_AXLE
@@ -34,10 +37,38 @@ export class Car {
 
   get speed() { return Math.hypot(this.velocity.x, this.velocity.y) }
 
+  setBoost(multiplier: number, duration: number) {
+    this.boostMultiplier = Math.max(1, multiplier)
+    this.boostTimer = Math.max(0, duration)
+  }
+
+  spinOut(duration: number) {
+    this.spinTimer = Math.max(this.spinTimer, duration)
+  }
+
+  registerImpact(impact: number) {
+    // Keep pivot authority through the brief gaps between rebounds.
+    if (impact > 0) this.contactSteeringTime = CONTACT_STEERING_GRACE
+    if (impact > 12) {
+      if (!this.contactCooldown) this.collisions++
+      this.contactCooldown = 0.14
+      this.bump = Math.max(this.bump, clamp(impact * 0.02, 1, 3))
+    }
+  }
+
   step(dt: number, controls: Controls, solids: readonly Solid[]) {
     this.bump = Math.max(0, this.bump - 14 * dt)
     this.contactCooldown = Math.max(0, this.contactCooldown - dt)
     this.contactSteeringTime = Math.max(0, this.contactSteeringTime - dt)
+    const speedCap = TOP_SPEED * this.speedScale * (this.boostTimer > 0 ? this.boostMultiplier : 1)
+    this.boostTimer = Math.max(0, this.boostTimer - dt)
+    if (this.boostTimer === 0) this.boostMultiplier = 1
+    const spinning = this.spinTimer > 0
+    if (spinning) {
+      this.heading += 9 * Math.min(dt, this.spinTimer)
+      this.spinTimer = Math.max(0, this.spinTimer - dt)
+      controls = { throttle: controls.throttle * 0.2, steer: 0, handbrake: true }
+    }
     const forward = { x: Math.cos(this.heading), y: Math.sin(this.heading) }
     const along = dot(this.velocity, forward)
     const speedRatio = clamp(Math.abs(along) / TOP_SPEED, 0, 1)
@@ -57,7 +88,7 @@ export class Car {
     const acceleration = braking ? 685 : controls.throttle < 0 ? 255 : 470
     longitudinal += controls.throttle * acceleration * dt
     longitudinal *= Math.exp(-(controls.handbrake ? 1.6 : controls.throttle ? 0.9 : 2.35) * dt)
-    longitudinal = clamp(longitudinal, -95, TOP_SPEED)
+    longitudinal = clamp(longitudinal, -95, speedCap)
     const cornering = Math.abs(controls.steer) * speedRatio
     const grip = controls.handbrake ? 1.8 : 16 - 3 * cornering
     lateral *= Math.exp(-grip * dt)
@@ -91,12 +122,6 @@ export class Car {
         }
       }
     }
-    // Keep pivot authority through the brief gaps between rebounds.
-    if (impact > 0) this.contactSteeringTime = CONTACT_STEERING_GRACE
-    if (impact > 12) {
-      if (!this.contactCooldown) this.collisions++
-      this.contactCooldown = 0.14
-      this.bump = Math.max(this.bump, clamp(impact * 0.02, 1, 3))
-    }
+    this.registerImpact(impact)
   }
 }

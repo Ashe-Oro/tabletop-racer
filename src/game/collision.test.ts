@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { boxContact, circleContact, overlaps, resolveContact, tableContacts } from './collision'
+import { Car } from './car'
+import { boxContact, circleContact, overlaps, resolveCarCollisions, resolveContact, tableContacts } from './collision'
 
 describe('arcade contacts', () => {
   it('uses radial circle normals, including at coincident centres', () => {
@@ -58,5 +59,65 @@ describe('arcade contacts', () => {
       { normal: { x: -1, y: 0 }, depth: 3 },
       { normal: { x: 0, y: 1 }, depth: 4 },
     ])
+  })
+})
+
+describe('car-to-car contacts', () => {
+  const headOn = (gap: number) => {
+    const a = new Car()
+    const b = new Car()
+    a.position = { x: 100, y: 100 }
+    b.position = { x: 100 + gap, y: 100 }
+    a.heading = 0
+    b.heading = Math.PI
+    return [a, b] as const
+  }
+
+  it('separates overlapping chassis and exchanges normal velocity while preserving sideways motion', () => {
+    const [a, b] = headOn(23)
+    a.velocity = { x: 200, y: 11 }
+    b.velocity = { x: -100, y: 7 }
+    resolveCarCollisions([a, b])
+    expect(b.position.x - a.position.x).toBeGreaterThan(2 * (a.axle + a.radius))
+    expect(a.velocity.x).toBeCloseTo(-22)
+    expect(b.velocity.x).toBeCloseTo(122)
+    expect(a.velocity.y).toBeCloseTo(11)
+    expect(b.velocity.y).toBeCloseTo(7)
+    for (const car of [a, b]) {
+      expect(car.bump).toBeGreaterThan(0)
+      expect(car.collisions).toBe(1)
+    }
+    resolveCarCollisions([a, b])
+    expect(a.collisions).toBe(1)
+    expect(a.velocity.x).toBeCloseTo(-22)
+  })
+
+  it('separates a side swipe and splits the impulse between both cars', () => {
+    const [a, b] = headOn(0)
+    b.heading = 0
+    b.position.y += 10
+    a.velocity = { x: 265, y: 45 }
+    b.velocity = { x: 260, y: -12 }
+    resolveCarCollisions([a, b])
+    expect(b.position.y - a.position.y).toBeGreaterThan(2 * a.radius)
+    expect(a.velocity.x).toBeCloseTo(265)
+    expect(b.velocity.x).toBeCloseTo(260)
+    expect(a.velocity.y).toBeLessThan(b.velocity.y)
+    expect(a.collisions).toBe(1)
+    expect(b.collisions).toBe(1)
+  })
+
+  it('cannot tunnel head-on at 270 px/s in the 120 Hz physics loop', () => {
+    const [a, b] = headOn(34)
+    a.velocity.x = 270
+    b.velocity.x = -270
+    for (let i = 0; i < 10; i++) {
+      for (const car of [a, b]) car.step(1 / 120, { throttle: 1, steer: 0, handbrake: false }, [])
+      resolveCarCollisions([a, b])
+      expect(b.position.x - a.position.x).toBeGreaterThanOrEqual(2 * (a.axle + a.radius))
+    }
+    expect(a.velocity.x).toBeLessThan(0)
+    expect(b.velocity.x).toBeGreaterThan(0)
+    expect([a.collisions, b.collisions]).toEqual([1, 1])
   })
 })
