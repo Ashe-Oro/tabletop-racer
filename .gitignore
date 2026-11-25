@@ -5,3 +5,15 @@ __pycache__/
 *.pyc
 .DS_Store
 /codex-out.txt
+
+.env
+.env.*
+.vercel
+
+# Local art work product and copyrighted reference screenshots (do not publish)
+art/refs/
+art/pipeline-logs/
+art/attempts/
+art/v3-work/
+art/carve_preview/
+art/v2-export/
