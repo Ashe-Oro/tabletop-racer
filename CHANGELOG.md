@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Swapped in Artist's Hero Car A as the default car with 36 slices at 43 × 71 px each.
+- Added a runtime fallback to the original placeholder car when the primary car fails to load or validate.
+- Preserved handoff cars during bulk placeholder regeneration and exposed `--bg-tol` for opaque sheets.
+
 ## 0.1.0 — Phase 1
 
 - Added six original orthographic placeholder sheets, carved sprite strips, and visual check sheets.

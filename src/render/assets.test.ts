@@ -1,8 +1,49 @@
-import { describe, expect, it } from 'vitest'
-import { validateEntry, validateStrip } from './assets'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { assetIds, loadAssets, validateEntry, validateStrip } from './assets'
 import { carTurn } from './stack'
 
 const entry = { slices: 16, sliceWidth: 20, sliceHeight: 36, source: 'art/placeholders/car.png' }
+
+describe('car loading', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it.each(['invalid manifest entry', 'missing strip', 'wrong strip dimensions'])('uses the placeholder for a %s', async failure => {
+    const fallback = { slices: 1, sliceWidth: 1, sliceHeight: 1, source: 'art/placeholders/car.png' }
+    const hero = { ...fallback, source: 'art/handoff/hero_car_a_fourview.png' }
+    const manifest = {
+      ...Object.fromEntries(assetIds.map(id => [id, fallback])),
+      car: failure === 'invalid manifest entry' ? { ...hero, slices: 0 } : hero,
+      car_placeholder: fallback,
+    }
+    const decode = vi.fn(async (src: string) => {
+      if (src.endsWith('/car.png') && failure === 'missing strip') throw new Error('Missing image')
+    })
+    vi.stubGlobal('fetch', async () => Response.json(manifest))
+    vi.stubGlobal('Image', class {
+      src = ''
+      naturalHeight = 1
+      get naturalWidth() { return this.src.endsWith('/car.png') ? 2 : 1 }
+      decode() { return decode(this.src) }
+    })
+    vi.stubGlobal('document', {
+      createElement: () => ({ getContext: () => ({
+        drawImage: vi.fn(),
+        getImageData: () => ({ data: new Uint8ClampedArray([0, 0, 0, 255]) }),
+      }) }),
+    })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const assets = await loadAssets()
+
+    expect(Object.keys(assets)).toEqual([...assetIds])
+    expect(assets.car).toMatchObject({ ...fallback, footprint: new Uint8Array([1]) })
+    expect(decode).toHaveBeenCalledWith(expect.stringMatching(/\/slices\/car_placeholder\.png$/))
+    expect(warn).toHaveBeenCalledExactlyOnceWith(expect.stringContaining('car_placeholder'), expect.any(Error))
+  })
+})
 
 describe('sprite strips', () => {
   it('accepts a complete manifest entry and its exact strip dimensions', () => {

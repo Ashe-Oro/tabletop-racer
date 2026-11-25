@@ -8,6 +8,15 @@
     "colours": 0,
     "shade": 0.14
   },
+  "car_placeholder": {
+    "slices": 16,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.14
+  },
   "pencil": {
     "slices": 12,
     "round": false,

@@ -12,6 +12,7 @@ export interface StackAsset extends AssetEntry {
 
 export const assetIds = ['car', 'pencil', 'coin', 'ruler', 'mug', 'cereal_box'] as const
 export type AssetId = typeof assetIds[number]
+type StackId = AssetId | 'car_placeholder'
 
 export function validateEntry(id: string, value: unknown): AssetEntry {
   if (!value || typeof value !== 'object') throw new Error(`Missing manifest entry for "${id}"`)
@@ -39,7 +40,7 @@ export function makeCanvas(width: number, height: number) {
   return { canvas, ctx }
 }
 
-async function loadStack(id: AssetId, entry: AssetEntry, base: string): Promise<StackAsset> {
+async function loadStack(id: StackId, entry: AssetEntry, base: string): Promise<StackAsset> {
   const image = new Image()
   image.src = `${base}slices/${id}.png`
   await image.decode()
@@ -70,8 +71,14 @@ export async function loadAssets(): Promise<Record<AssetId, StackAsset>> {
   if (!result.ok) throw new Error(`Asset manifest request returned ${result.status}`)
   const manifest: unknown = await result.json()
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) throw new Error('Invalid asset manifest')
-  const entries = await Promise.all(assetIds.map(async id => [
-    id, await loadStack(id, validateEntry(id, (manifest as Record<string, unknown>)[id]), base),
-  ] as const))
+  const manifestEntries = manifest as Record<string, unknown>
+  const load = async (id: StackId) => loadStack(id, validateEntry(id, manifestEntries[id]), base)
+  const entries = await Promise.all(assetIds.map(async id => {
+    const asset = id === 'car' ? await load(id).catch(error => {
+      console.warn('Could not load "car". Falling back to "car_placeholder".', error)
+      return load('car_placeholder')
+    }) : await load(id)
+    return [id, asset] as const
+  }))
   return Object.fromEntries(entries) as Record<AssetId, StackAsset>
 }

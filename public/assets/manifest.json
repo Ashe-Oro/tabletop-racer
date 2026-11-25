@@ -1,5 +1,11 @@
 {
   "car": {
+    "sliceHeight": 71,
+    "sliceWidth": 43,
+    "slices": 36,
+    "source": "art/handoff/hero_car_a_fourview.png"
+  },
+  "car_placeholder": {
     "sliceHeight": 36,
     "sliceWidth": 20,
     "slices": 16,

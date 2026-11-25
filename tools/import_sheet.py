@@ -15,8 +15,13 @@ from generate_placeholders import BG, OUTPUT, generate
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "public/assets"
+MANIFEST = ASSETS / "manifest.json"
 CHECKS = ROOT / "art/checks"
 PRESETS = json.loads((ROOT / "tools/asset_presets.json").read_text())
+
+
+def read_manifest():
+    return json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
 
 
 def import_sheet(sheet, asset_id, overrides):
@@ -31,8 +36,7 @@ def import_sheet(sheet, asset_id, overrides):
     if count < 1:
         raise ValueError("--slices must be a positive integer.")
 
-    manifest_path = ASSETS / "manifest.json"
-    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    manifest = read_manifest()
     source = str(sheet.resolve().relative_to(ROOT)) if sheet.resolve().is_relative_to(ROOT) else sheet.name
     with TemporaryDirectory(dir=ROOT) as temporary:
         folder = Path(temporary)
@@ -69,7 +73,7 @@ def import_sheet(sheet, asset_id, overrides):
         CHECKS.mkdir(parents=True, exist_ok=True)
         strip.replace(ASSETS / "slices" / strip.name)
         preview.replace(CHECKS / preview.name)
-        new_manifest.replace(manifest_path)
+        new_manifest.replace(MANIFEST)
     print(f"{asset_id}: {count} slices of {slice_width} × {height} px")
     for line in output.splitlines():
         if line.startswith("warning:"):
@@ -88,6 +92,7 @@ def main():
     parser.add_argument("--order", choices=["auto", "reading"])
     parser.add_argument("--colours", type=int)
     parser.add_argument("--shade", type=float)
+    parser.add_argument("--bg-tol", type=int, help="Flood-fill background tolerance for opaque sheets.")
     parser.add_argument("--key-background", action="store_true", default=None,
                         help="Treat exactly RGB (250,250,250) as transparent, including enclosed holes.")
     args = parser.parse_args()
@@ -95,9 +100,15 @@ def main():
                  if key not in {"sheet", "asset_id", "all_placeholders"} and value is not None}
     try:
         if args.all_placeholders and not (args.sheet or args.asset_id or overrides):
+            car = read_manifest().get("car")
+            source = car.get("source") if isinstance(car, dict) else None
+            preserve_car = isinstance(source, str) and source.startswith("art/handoff/")
             generate()
             for asset_id in PRESETS:
-                import_sheet(OUTPUT / f"{asset_id}.png", asset_id, {})
+                if asset_id == "car" and preserve_car:
+                    continue
+                sheet_name = "car" if asset_id == "car_placeholder" else asset_id
+                import_sheet(OUTPUT / f"{sheet_name}.png", asset_id, {})
         elif args.sheet and args.asset_id and not args.all_placeholders:
             import_sheet(args.sheet, args.asset_id, overrides)
         else:
