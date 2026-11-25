@@ -8,3 +8,6 @@
 - Added keyboard driving, arcade drift, tire effects, and collision bounce.
 - Added a three-lap race with directional checkpoints, lap splits, a live circuit map, saved best lap, and a finish screen.
 - Matched prop and car collision dimensions to the loaded sprite strips for artist swaps.
+- Widened the carved mug handle opening and matched its collision footprint.
+- Added Vitest coverage for checkpoint order, lap records, collision math, and sprite strip validation.
+- Verified placeholder regeneration, artist swaps, and a full race in Chromium against the production build.

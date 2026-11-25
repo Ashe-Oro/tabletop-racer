@@ -77,7 +77,7 @@ function boundaryProps(side: number, footprints: Record<PropId, Footprint>): Pro
   return props
 }
 
-const mug = { x: 1155, y: 348, angle: 0.7 }
+const mug = { x: 1145, y: 348, angle: 3.93 }
 const box = { x: 728, y: 280, angle: -0.33 }
 function mugCircle(offset: number, radius: number): Solid {
   return {
@@ -98,8 +98,12 @@ export function buildTrack(footprints: Record<PropId, Footprint>) {
   ]
   const solids = props.map(prop => prop.solid)
   if (handleLength > 0) {
-    const handleRadius = Math.min(bowlWidth * 0.18, handleLength / 2)
-    solids.push(mugCircle(handleRadius - footprints.mug.sliceHeight / 2, handleRadius))
+    const handleRadius = Math.min(bowlWidth * 0.1, handleLength / 2)
+    const circles = Math.ceil(handleLength / (2 * handleRadius))
+    for (let i = 0; i < circles; i++) {
+      const offset = (i + 0.5) * handleLength / circles - footprints.mug.sliceHeight / 2
+      solids.push(mugCircle(offset, handleRadius))
+    }
   }
   for (const prop of [...boundaryProps(1, footprints), ...boundaryProps(-1, footprints)]) {
     if (solids.some(solid => overlaps(prop.solid, solid, 4))) continue

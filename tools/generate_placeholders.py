@@ -150,8 +150,8 @@ def ruler():
 def mug():
     blue, light, dark = "#488f96", "#89c5ba", "#326675"
     top, d = view(44, 69)
-    d.rounded_rectangle((14, 0, 29, 29), 6, fill=blue)
-    d.rectangle((17, 3, 26, 27), fill=light)
+    d.rounded_rectangle((18, 0, 25, 29), 3, fill=blue)
+    d.rectangle((20, 3, 23, 27), fill=light)
     d.ellipse((0, 25, 43, 68), fill=blue)
     d.ellipse((2, 27, 41, 66), fill=light)
     d.ellipse((5, 30, 38, 63), fill=dark)
@@ -159,9 +159,9 @@ def mug():
     d.arc((9, 34, 34, 59), 30, 160, fill="#a36649", width=2)
     d.arc((11, 36, 29, 54), 205, 290, fill="#865342", width=2)
     side, d = view(69, 36)
-    d.rounded_rectangle((38, 5, 68, 28), 6, fill=blue)
-    d.rounded_rectangle((42, 10, 63, 23), 3, fill=(0, 0, 0, 0))
-    d.rectangle((44, 7, 62, 8), fill=light)
+    d.rounded_rectangle((37, 3, 68, 32), 6, fill=blue)
+    d.rounded_rectangle((42, 7, 64, 27), 4, fill=(0, 0, 0, 0))
+    d.rectangle((44, 4, 62, 5), fill=light)
     d.rounded_rectangle((0, 0, 43, 35), 4, fill=blue)
     d.rectangle((2, 2, 41, 4), fill=light)
     d.rectangle((2, 27, 41, 31), fill=dark)

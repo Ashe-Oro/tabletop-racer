@@ -25,6 +25,8 @@ def import_sheet(sheet, asset_id, overrides):
     if asset_id not in PRESETS and "slices" not in overrides:
         raise ValueError("New asset IDs require an explicit --slices count.")
     settings = {**PRESETS.get(asset_id, {}), **overrides}
+    if not sheet.is_file():
+        raise ValueError(f"Sheet not found: {sheet}")
     count = settings["slices"]
     if count < 1:
         raise ValueError("--slices must be a positive integer.")
@@ -38,7 +40,8 @@ def import_sheet(sheet, asset_id, overrides):
         key_background = settings.pop("key_background", False)
         if sheet.resolve().parent == OUTPUT or key_background:
             # The exact reserved background also shows through enclosed holes, e.g. the mug handle.
-            rgba = np.array(Image.open(sheet).convert("RGBA"))
+            with Image.open(sheet) as image:
+                rgba = np.array(image.convert("RGBA"))
             rgba[np.all(rgba[:, :, :3] == BG, axis=2), 3] = 0
             carve_input = folder / "keyed.png"
             Image.fromarray(rgba).save(carve_input)
