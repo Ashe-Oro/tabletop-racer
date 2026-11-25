@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "slice": "python3 tools/import_sheet.py",
-    "slice:all": "python3 tools/import_sheet.py --all-placeholders"
+    "slice:all": "python3 tools/import_sheet.py --all-placeholders",
+    "slice:artist": "python3 tools/import_sheet.py --all-artist"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

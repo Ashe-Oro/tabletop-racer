@@ -2,10 +2,12 @@
 
 ## Unreleased
 
-- Disabled the in-track mug, cereal box, and their colliders by default and excluded outline props that overlap the driving lane. Pencils, rulers, and coins still outline the circuit. Set `TRACK_CONFIG.OBSTACLES` to `true` to restore the mug and cereal box.
+- Imported Artist v1's nine props. The pencil, ruler, and coin stack outline the circuit with clearance for the driving lane. The mug, cereal box, eraser, salt shaker, butter dish, and crumb pile are bumpable with `TRACK_CONFIG.OBSTACLES` enabled. Obstacles are off by default.
+- Replaced the procedural tabletop with Artist's nearest-neighbor oak tile and retained the edge, start/finish checks, and direction chevrons.
+- The HUD uses Artist's ink, cream, teal, red, and gold palette with a pixel frame. Bitmap glyphs, the pre-race countdown, and position badges remain open.
 - Swapped in Artist's Hero Car A as the default car with 36 slices at 43 × 71 px each.
 - Added a runtime fallback to the original placeholder car when the primary car fails to load or validate.
-- Preserved handoff cars during bulk placeholder regeneration and exposed `--bg-tol` for opaque sheets.
+- Added an Artist v1 bulk import and support for pre-carved strips. Bulk placeholder regeneration preserves all handoff-sourced stacks. The importer accepts `--bg-tol` for opaque sheets.
 
 ## 0.1.0 — Phase 1
 

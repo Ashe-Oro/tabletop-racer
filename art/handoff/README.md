@@ -6,7 +6,8 @@ nose points down and the side nose points left. Use a flat near-white or
 transparent background, crisp pixel edges and a 1 px dark outline.
 
 From the repository root, run `npm run slice -- art/handoff/my-car.png car`.
-Use one of `car`, `car_placeholder`, `pencil`, `coin`, `ruler`, `mug` or `cereal_box`.
+Use one of `car`, `car_placeholder`, `pencil`, `coin`, `ruler`, `mug`,
+`cereal_box`, `eraser`, `salt_shaker`, `butter_dish` or `crumb_pile`.
 Use `--slices N` to override the default height. Prefer transparent PNGs for
 enclosed holes. For opaque sheets, `--bg-tol N` sets the integer color
 tolerance for flood-fill background removal (default 28). For an opaque sheet
@@ -18,8 +19,14 @@ Review the output in `art/checks/` and reload the game. If the `car` entry in
 game logs a warning and uses the `car_placeholder` entry and
 `public/assets/slices/car_placeholder.png`.
 
-`npm run slice:all` regenerates the placeholder props and `car_placeholder`.
-It also regenerates `car` when its source is outside `art/handoff/` or missing.
+`npm run slice:artist` installs Artist v1's nine props and downsamples the table
+tile. The slicer drops small end views below its 14% area threshold, so it
+reports “Found 2 drawings” on the long pencil and ruler fourviews. The artist
+command uses their supplied strips. To install one strip on its own, run
+`npm run slice -- --from-slices art/handoff/prop_pencil_slices.png pencil --slices 12`.
+
+`npm run slice:all` regenerates the original placeholders and preserves every
+installed stack whose manifest source starts with `art/handoff/`.
 To explicitly restore the placeholder as the primary car, run
 `npm run slice -- art/placeholders/car.png car`. The importer requires Python 3
 with Pillow and NumPy.

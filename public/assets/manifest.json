@@ -1,4 +1,10 @@
 {
+  "butter_dish": {
+    "sliceHeight": 37,
+    "sliceWidth": 54,
+    "slices": 26,
+    "source": "art/handoff/prop_butter_dish_fourview.png"
+  },
   "car": {
     "sliceHeight": 71,
     "sliceWidth": 43,
@@ -12,33 +18,51 @@
     "source": "art/placeholders/car.png"
   },
   "cereal_box": {
-    "sliceHeight": 48,
-    "sliceWidth": 31,
-    "slices": 60,
-    "source": "art/placeholders/cereal_box.png"
+    "sliceHeight": 25,
+    "sliceWidth": 67,
+    "slices": 88,
+    "source": "art/handoff/prop_cereal_box_fourview.png"
   },
   "coin": {
-    "sliceHeight": 22,
-    "sliceWidth": 22,
-    "slices": 6,
-    "source": "art/placeholders/coin.png"
+    "sliceHeight": 17,
+    "sliceWidth": 16,
+    "slices": 16,
+    "source": "art/handoff/prop_coin_stack_fourview.png"
+  },
+  "crumb_pile": {
+    "sliceHeight": 35,
+    "sliceWidth": 38,
+    "slices": 12,
+    "source": "art/handoff/prop_crumb_pile_fourview.png"
+  },
+  "eraser": {
+    "sliceHeight": 34,
+    "sliceWidth": 19,
+    "slices": 12,
+    "source": "art/handoff/prop_eraser_fourview.png"
   },
   "mug": {
-    "sliceHeight": 69,
-    "sliceWidth": 44,
-    "slices": 36,
-    "source": "art/placeholders/mug.png"
+    "sliceHeight": 60,
+    "sliceWidth": 72,
+    "slices": 60,
+    "source": "art/handoff/prop_mug_fourview.png"
   },
   "pencil": {
-    "sliceHeight": 83,
-    "sliceWidth": 12,
+    "sliceHeight": 147,
+    "sliceWidth": 18,
     "slices": 12,
-    "source": "art/placeholders/pencil.png"
+    "source": "art/handoff/prop_pencil_slices.png"
   },
   "ruler": {
-    "sliceHeight": 100,
-    "sliceWidth": 20,
-    "slices": 7,
-    "source": "art/placeholders/ruler.png"
+    "sliceHeight": 169,
+    "sliceWidth": 23,
+    "slices": 8,
+    "source": "art/handoff/prop_ruler_slices.png"
+  },
+  "salt_shaker": {
+    "sliceHeight": 25,
+    "sliceWidth": 25,
+    "slices": 44,
+    "source": "art/handoff/prop_salt_shaker_fourview.png"
   }
 }

@@ -5,24 +5,26 @@ import type { Prop } from '../game/track'
 import type { AssetId, StackAsset } from './assets'
 import type { TireEffects } from './effects'
 import { SQUASH, StackSprite, carTurn } from './stack'
-import { EDGE, bakeTable } from './table'
+import { EDGE } from './table'
 
 export class Scene {
   private readonly ctx: CanvasRenderingContext2D
-  private readonly table = bakeTable()
   private readonly vehicle: StackSprite
   private readonly scenery: { x: number, y: number, sprite: StackSprite }[]
   private camera = { x: spawn.x, y: spawn.y }
   private scale = 2
   private turn = NaN
 
-  constructor(private readonly canvas: HTMLCanvasElement, assets: Record<AssetId, StackAsset>, props: Prop[]) {
+  constructor(private readonly canvas: HTMLCanvasElement, private readonly table: HTMLCanvasElement,
+    assets: Record<AssetId, StackAsset>, props: Prop[]) {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas 2D is unavailable.')
     this.ctx = ctx
     this.vehicle = new StackSprite(assets.car)
     this.scenery = props.map(prop => {
-      const sprite = new StackSprite(assets[prop.asset], prop.asset === 'mug' || prop.asset === 'cereal_box')
+      const asset = assets[prop.asset]
+      const castShadow = asset.slices >= 36 || prop.asset === 'mug' || prop.asset === 'cereal_box'
+      const sprite = new StackSprite(asset, castShadow)
       sprite.bake(prop.angle)
       return { x: prop.x, y: prop.y, sprite }
     }).sort((a, b) => a.y - b.y)

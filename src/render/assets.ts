@@ -10,7 +10,10 @@ export interface StackAsset extends AssetEntry {
   footprint: Uint8Array
 }
 
-export const assetIds = ['car', 'pencil', 'coin', 'ruler', 'mug', 'cereal_box'] as const
+export const assetIds = [
+  'car', 'pencil', 'coin', 'ruler', 'mug', 'cereal_box', 'eraser',
+  'salt_shaker', 'butter_dish', 'crumb_pile',
+] as const
 export type AssetId = typeof assetIds[number]
 type StackId = AssetId | 'car_placeholder'
 

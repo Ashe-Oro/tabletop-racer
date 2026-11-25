@@ -23,43 +23,79 @@
     "top_nose": "down",
     "side_nose": "left",
     "order": "reading",
-    "colours": 0,
-    "shade": 0.14
+    "colours": 32,
+    "shade": 0.12
   },
   "coin": {
-    "slices": 6,
+    "slices": 16,
     "round": true,
     "top_nose": "down",
     "side_nose": "left",
     "order": "reading",
-    "colours": 0,
-    "shade": 0.14
+    "colours": 32,
+    "shade": 0.12
   },
   "ruler": {
-    "slices": 7,
+    "slices": 8,
     "round": false,
     "top_nose": "down",
     "side_nose": "left",
     "order": "reading",
-    "colours": 0,
-    "shade": 0.14
+    "colours": 32,
+    "shade": 0.12
   },
   "mug": {
-    "slices": 36,
-    "round": false,
+    "slices": 60,
+    "round": true,
     "top_nose": "down",
     "side_nose": "left",
     "order": "reading",
-    "colours": 0,
-    "shade": 0.14
+    "colours": 32,
+    "shade": 0.12
   },
   "cereal_box": {
-    "slices": 60,
+    "slices": 88,
     "round": false,
     "top_nose": "down",
     "side_nose": "left",
     "order": "reading",
-    "colours": 0,
-    "shade": 0.14
+    "colours": 32,
+    "shade": 0.12
+  },
+  "eraser": {
+    "slices": 12,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 32,
+    "shade": 0.12
+  },
+  "salt_shaker": {
+    "slices": 44,
+    "round": true,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 32,
+    "shade": 0.12
+  },
+  "butter_dish": {
+    "slices": 26,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 32,
+    "shade": 0.12
+  },
+  "crumb_pile": {
+    "slices": 12,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 32,
+    "shade": 0.12
   }
 }

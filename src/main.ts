@@ -7,6 +7,7 @@ import { loadAssets } from './render/assets'
 import { TireEffects } from './render/effects'
 import { Hud, element } from './render/hud'
 import { Scene } from './render/scene'
+import { bakeTable } from './render/table'
 
 interface RacerState {
   readonly x: number
@@ -33,9 +34,9 @@ const drivingKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
 const stepSeconds = 1 / 120
 
 async function start() {
-  const assets = await loadAssets()
+  const [assets, table] = await Promise.all([loadAssets(), bakeTable()])
   const { props, solids } = buildTrack(assets)
-  const scene = new Scene(element<HTMLCanvasElement>('race'), assets, props)
+  const scene = new Scene(element<HTMLCanvasElement>('race'), table, assets, props)
   const hud = new Hud()
   let bestLap: number | null = null
   try { bestLap = readBestLap(localStorage) } catch { /* Storage can be disabled. */ }

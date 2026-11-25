@@ -55,14 +55,29 @@ export const spawn = {
 }
 
 export type PropId = 'ruler' | 'pencil' | 'coin' | 'mug' | 'cereal_box'
+  | 'eraser' | 'salt_shaker' | 'butter_dish' | 'crumb_pile'
 export interface Prop extends Point {
   asset: PropId
   angle: number
   solid: Solid
 }
 
-function boundaryProps(side: number, footprints: Record<PropId, Footprint>): Prop[] {
-  const props: Prop[] = []
+function boxSolid(position: Point & { angle: number }, footprint: Footprint): Solid {
+  return { ...position, halfWidth: footprint.sliceWidth / 2, halfLength: footprint.sliceHeight / 2 }
+}
+
+function fitsOutline(solid: Solid, solids: Solid[]) {
+  const { x, y } = solid
+  const extentX = 'radius' in solid ? solid.radius
+    : Math.abs(Math.cos(solid.angle)) * solid.halfWidth + Math.abs(Math.sin(solid.angle)) * solid.halfLength
+  const extentY = 'radius' in solid ? solid.radius
+    : Math.abs(Math.sin(solid.angle)) * solid.halfWidth + Math.abs(Math.cos(solid.angle)) * solid.halfLength
+  return x - extentX >= 0 && x + extentX <= TABLE_WIDTH && y - extentY >= 0 && y + extentY <= TABLE_HEIGHT
+    && !lane.some(sample => overlaps(sample, solid, 0))
+    && !solids.some(other => overlaps(solid, other, 4))
+}
+
+function addBoundary(side: number, footprints: Record<PropId, Footprint>, props: Prop[], solids: Solid[]) {
   let distance = side > 0 ? 12 : 64
   for (let i = 0; i < route.length; i++) {
     const p = route[i]
@@ -70,30 +85,40 @@ function boundaryProps(side: number, footprints: Record<PropId, Footprint>): Pro
     distance += Math.hypot(p.x - prev.x, p.y - prev.y)
     const bend = Math.floor(i / SUBDIVISIONS)
     const curved = [1, 3, 4, 5, 7, 8, 9, 11, 12].includes(bend)
-    if (distance < (curved ? 49 : 116)) continue
-    distance = 0
     const asset = curved ? 'coin' : bend % 2 === 0 ? 'ruler' : 'pencil'
-    const halfWidth = footprints[asset].sliceWidth / 2
-    const halfLength = footprints[asset].sliceHeight / 2
-    const radius = Math.max(halfWidth, halfLength)
-    const offset = side * (TRACK_HALF_WIDTH + (asset === 'coin' ? radius + 2 : halfWidth + 7))
-    const x = p.x - p.forward.y * offset
-    const y = p.y + p.forward.x * offset
+    const footprint = footprints[asset]
+    const { sliceWidth, sliceHeight } = footprint
+    if (distance < (curved ? 49 : sliceHeight * 0.85)) continue
     const angle = Math.atan2(p.forward.y, p.forward.x) - Math.PI / 2
-    const solid = asset === 'coin' ? { x, y, radius }
-      : { x, y, angle, halfWidth, halfLength }
-    props.push({ x, y, angle, asset, solid })
+    const radius = Math.max(sliceWidth, sliceHeight) / 2
+    const clearance = asset === 'coin' ? radius + 2 : sliceWidth / 2 + 7
+    for (const extra of asset === 'coin' ? [0] : [0, 8, 16, 24]) {
+      const offset = side * (TRACK_HALF_WIDTH + clearance + extra)
+      const x = p.x - p.forward.y * offset
+      const y = p.y + p.forward.x * offset
+      const solid = asset === 'coin' ? { x, y, radius } : boxSolid({ x, y, angle }, footprint)
+      if (!fitsOutline(solid, solids)) continue
+      props.push({ x, y, angle, asset, solid })
+      solids.push(solid)
+      distance = 0
+      break
+    }
   }
-  return props
 }
 
 const mug = { x: 1145, y: 348, angle: 3.93 }
-const box = { x: 728, y: 280, angle: -0.33 }
-function mugCircle(offset: number, radius: number): Solid {
+const obstacles = [
+  { asset: 'cereal_box', x: 728, y: 280, angle: -0.33 },
+  { asset: 'eraser', x: 477, y: 632, angle: 0.42 },
+  { asset: 'salt_shaker', x: 957, y: 606, angle: 0 },
+  { asset: 'butter_dish', x: 508, y: 428, angle: -0.24 },
+  { asset: 'crumb_pile', x: 870, y: 410, angle: 0.71 },
+] as const
+
+function mugPoint(offset: number, axis: number): Point {
   return {
-    x: mug.x - Math.sin(mug.angle) * offset,
-    y: mug.y + Math.cos(mug.angle) * offset,
-    radius,
+    x: mug.x + Math.cos(axis) * offset,
+    y: mug.y + Math.sin(axis) * offset,
   }
 }
 
@@ -101,29 +126,29 @@ export function buildTrack(footprints: Record<PropId, Footprint>, config = TRACK
   const props: Prop[] = []
   const solids: Solid[] = []
   if (config.OBSTACLES) {
-    const bowlWidth = Math.min(footprints.mug.sliceWidth, footprints.mug.sliceHeight)
-    const handleLength = footprints.mug.sliceHeight - bowlWidth
-    props.push(
-      { ...mug, asset: 'mug', solid: mugCircle(handleLength / 2, bowlWidth / 2) },
-      { ...box, asset: 'cereal_box', solid: {
-        ...box, halfWidth: footprints.cereal_box.sliceWidth / 2, halfLength: footprints.cereal_box.sliceHeight / 2,
-      } },
-    )
+    const { sliceWidth, sliceHeight } = footprints.mug
+    const bowlWidth = Math.min(sliceWidth, sliceHeight)
+    const handleLength = Math.abs(sliceWidth - sliceHeight)
+    // The handoff mug's handle extends toward local −X. The placeholder extends toward −Y.
+    const axis = sliceWidth >= sliceHeight ? mug.angle : mug.angle + Math.PI / 2
+    props.push({ ...mug, asset: 'mug', solid: { ...mugPoint(handleLength / 2, axis), radius: bowlWidth / 2 } })
+    for (const { asset, ...position } of obstacles) {
+      const footprint = footprints[asset]
+      const solid = asset === 'salt_shaker'
+        ? { ...position, radius: Math.max(footprint.sliceWidth, footprint.sliceHeight) / 2 }
+        : boxSolid(position, footprint)
+      props.push({ ...position, asset, solid })
+    }
     solids.push(...props.map(prop => prop.solid))
     if (handleLength > 0) {
-      const handleRadius = Math.min(bowlWidth * 0.1, handleLength / 2)
-      const circles = Math.ceil(handleLength / (2 * handleRadius))
-      for (let i = 0; i < circles; i++) {
-        const offset = (i + 0.5) * handleLength / circles - footprints.mug.sliceHeight / 2
-        solids.push(mugCircle(offset, handleRadius))
-      }
+      const overlap = 2
+      solids.push({
+        ...mugPoint((-bowlWidth + overlap) / 2, axis), angle: axis,
+        halfWidth: (handleLength + overlap) / 2, halfLength: bowlWidth * (sliceWidth >= sliceHeight ? 0.16 : 0.1),
+      })
     }
   }
-  for (const prop of [...boundaryProps(1, footprints), ...boundaryProps(-1, footprints)]) {
-    if (lane.some(sample => overlaps(sample, prop.solid, 0))) continue
-    if (solids.some(solid => overlaps(prop.solid, solid, 4))) continue
-    props.push(prop)
-    solids.push(prop.solid)
-  }
+  addBoundary(1, footprints, props, solids)
+  addBoundary(-1, footprints, props, solids)
   return { props, solids }
 }

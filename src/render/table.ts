@@ -2,13 +2,6 @@ import { TABLE_HEIGHT, TABLE_WIDTH, TRACK_HALF_WIDTH, gates, route } from '../ga
 import { makeCanvas } from './assets'
 import { SQUASH } from './stack'
 
-function randomSource(seed: number) {
-  return () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
-    return seed / 0x100000000
-  }
-}
-
 function circuitPath(ctx: CanvasRenderingContext2D) {
   ctx.beginPath()
   ctx.moveTo(route[0].x, route[0].y)
@@ -18,10 +11,12 @@ function circuitPath(ctx: CanvasRenderingContext2D) {
 
 export const EDGE = 21
 
-export function bakeTable() {
+export async function bakeTable() {
+  const tile = new Image()
+  tile.src = `${import.meta.env.BASE_URL}assets/table_wood_tile.png`
+  const loaded = await tile.decode().then(() => true, () => false)
   const depth = Math.ceil(TABLE_HEIGHT * SQUASH)
   const { canvas, ctx } = makeCanvas(TABLE_WIDTH + EDGE * 2, depth + EDGE * 2 + 26)
-  const random = randomSource(718)
   ctx.translate(EDGE, EDGE)
   ctx.fillStyle = '#2c1e1c'
   ctx.fillRect(-2, 8, TABLE_WIDTH + 4, depth + 18)
@@ -36,34 +31,16 @@ export function bakeTable() {
   ctx.beginPath()
   ctx.rect(0, 0, TABLE_WIDTH, depth)
   ctx.clip()
-  const plankColors = ['#ad714b', '#b67b51', '#b1744d', '#bd8054', '#b4774d', '#b87b51']
-  const plankHeight = 85
-  for (let y = 0; y < depth; y += plankHeight) {
-    ctx.fillStyle = plankColors[Math.floor(y / plankHeight) % plankColors.length]
-    ctx.fillRect(0, y, TABLE_WIDTH, plankHeight)
-    ctx.fillStyle = '#8f593d'
-    ctx.fillRect(0, y, TABLE_WIDTH, 2)
-    ctx.fillStyle = '#c89161'
-    ctx.fillRect(0, y + 2, TABLE_WIDTH, 1)
-  }
-  for (let i = 0; i < 3100; i++) {
-    const x = Math.floor(random() * TABLE_WIDTH)
-    const y = Math.floor(random() * depth)
-    const length = Math.floor(4 + random() ** 2 * 142)
-    ctx.fillStyle = i % 3 === 0 ? '#6e453222' : '#f1bf8c2c'
-    ctx.fillRect(x, y, length, 1)
-    if (i % 11 === 0) ctx.fillRect(x + length, y - 1, Math.ceil(length / 3), 1)
-  }
-  for (let i = 0; i < 37; i++) {
-    const x = Math.floor(random() * TABLE_WIDTH)
-    const y = Math.floor(random() * depth)
-    const radius = 3 + Math.floor(random() * 8)
-    for (let ring = 1; ring <= 3; ring++) {
-      ctx.strokeStyle = ring === 1 ? '#76483140' : '#8f583434'
-      ctx.beginPath()
-      ctx.ellipse(x, y, ring * radius * 2.4, ring * radius * 0.48, 0, 0, 2 * Math.PI)
-      ctx.stroke()
+  if (loaded) {
+    // Bake at native tile resolution; Scene scales the full table by an integer.
+    for (let y = 0; y < depth; y += tile.naturalHeight) {
+      for (let x = 0; x < TABLE_WIDTH; x += tile.naturalWidth) ctx.drawImage(tile, x, y)
     }
+  } else {
+    ctx.fillStyle = '#b4774d'
+    ctx.fillRect(0, 0, TABLE_WIDTH, depth)
+    ctx.fillStyle = '#8f593d'
+    for (let y = 84; y < depth; y += 85) ctx.fillRect(0, y, TABLE_WIDTH, 2)
   }
 
   ctx.save()
