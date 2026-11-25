@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Installed Artist v2 slice revisions: hex pencil with a flush ferrule, unbanded mug, 2-slice butter-dish seam, stable salt-cap holes, clean coin disks, and Hero Car A with a top-only stripe and softer shoulders. `TRACK_CONFIG.OBSTACLES` stays off by default.
+- `npm run slice:artist` now installs the current shipped strips for the car and all nine props, refuses archived `*_v1_*` files, and no longer recarves stale four-views.
 - Imported Artist v1's nine props. The pencil, ruler, and coin stack outline the circuit with clearance for the driving lane. The mug, cereal box, eraser, salt shaker, butter dish, and crumb pile are bumpable with `TRACK_CONFIG.OBSTACLES` enabled. Obstacles are off by default.
 - Replaced the procedural tabletop with Artist's nearest-neighbor oak tile and retained the edge, start/finish checks, and direction chevrons.
 - The HUD uses Artist's ink, cream, teal, red, and gold palette with a pixel frame. Bitmap glyphs, the pre-race countdown, and position badges remain open.

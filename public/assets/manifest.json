@@ -3,13 +3,13 @@
     "sliceHeight": 37,
     "sliceWidth": 54,
     "slices": 26,
-    "source": "art/handoff/prop_butter_dish_fourview.png"
+    "source": "art/handoff/prop_butter_dish_slices.png"
   },
   "car": {
     "sliceHeight": 71,
     "sliceWidth": 43,
     "slices": 36,
-    "source": "art/handoff/hero_car_a_fourview.png"
+    "source": "art/handoff/hero_car_a_slices.png"
   },
   "car_placeholder": {
     "sliceHeight": 36,
@@ -21,31 +21,31 @@
     "sliceHeight": 25,
     "sliceWidth": 67,
     "slices": 88,
-    "source": "art/handoff/prop_cereal_box_fourview.png"
+    "source": "art/handoff/prop_cereal_box_slices.png"
   },
   "coin": {
     "sliceHeight": 17,
     "sliceWidth": 16,
     "slices": 16,
-    "source": "art/handoff/prop_coin_stack_fourview.png"
+    "source": "art/handoff/prop_coin_stack_slices.png"
   },
   "crumb_pile": {
     "sliceHeight": 35,
     "sliceWidth": 38,
     "slices": 12,
-    "source": "art/handoff/prop_crumb_pile_fourview.png"
+    "source": "art/handoff/prop_crumb_pile_slices.png"
   },
   "eraser": {
     "sliceHeight": 34,
     "sliceWidth": 19,
     "slices": 12,
-    "source": "art/handoff/prop_eraser_fourview.png"
+    "source": "art/handoff/prop_eraser_slices.png"
   },
   "mug": {
     "sliceHeight": 60,
     "sliceWidth": 72,
     "slices": 60,
-    "source": "art/handoff/prop_mug_fourview.png"
+    "source": "art/handoff/prop_mug_slices.png"
   },
   "pencil": {
     "sliceHeight": 147,
@@ -63,6 +63,6 @@
     "sliceHeight": 25,
     "sliceWidth": 25,
     "slices": 44,
-    "source": "art/handoff/prop_salt_shaker_fourview.png"
+    "source": "art/handoff/prop_salt_shaker_slices.png"
   }
 }

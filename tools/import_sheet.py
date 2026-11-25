@@ -22,10 +22,19 @@ CHECKS = ROOT / "art/checks"
 SLICER = ROOT / "tools/sprite-stacking/scripts/views_to_slices.py"
 PRESETS = json.loads((ROOT / "tools/asset_presets.json").read_text())
 HANDOFF = ROOT / "art/handoff"
-ARTIST_PROPS = {
-    "mug": "mug", "cereal_box": "cereal_box", "pencil": "pencil",
-    "coin": "coin_stack", "ruler": "ruler", "eraser": "eraser",
-    "salt_shaker": "salt_shaker", "butter_dish": "butter_dish", "crumb_pile": "crumb_pile",
+# Exact current filenames only. Archived v1 files use a `_v1_` infix and must never be selected.
+# Prefer shipped slices over recarving four-views, because v2 revisions may live only in the strips.
+ARTIST_IMPORTS = {
+    "car": ("hero_car_a_slices.png", 36),
+    "pencil": ("prop_pencil_slices.png", 12),
+    "coin": ("prop_coin_stack_slices.png", 16),
+    "ruler": ("prop_ruler_slices.png", 8),
+    "mug": ("prop_mug_slices.png", 60),
+    "cereal_box": ("prop_cereal_box_slices.png", 88),
+    "eraser": ("prop_eraser_slices.png", 12),
+    "salt_shaker": ("prop_salt_shaker_slices.png", 44),
+    "butter_dish": ("prop_butter_dish_slices.png", 26),
+    "crumb_pile": ("prop_crumb_pile_slices.png", 12),
 }
 PLACEHOLDERS = {
     "car": (16, False), "car_placeholder": (16, False), "pencil": (12, False),
@@ -96,6 +105,8 @@ def import_sheet(sheet, asset_id, overrides, from_slices=False):
     settings.update(overrides)
     if not sheet.is_file():
         raise ValueError(f"Sheet not found: {sheet}")
+    if "_v1_" in sheet.name:
+        raise ValueError(f"Refusing archived v1 asset: {sheet}")
     count = settings["slices"]
     if count < 1:
         raise ValueError("--slices must be a positive integer.")
@@ -123,10 +134,13 @@ def import_sheet(sheet, asset_id, overrides, from_slices=False):
 
 
 def import_artist():
-    for asset_id, name in ARTIST_PROPS.items():
-        pre_carved = asset_id in {"pencil", "ruler"}
-        suffix = "slices" if pre_carved else "fourview"
-        import_sheet(HANDOFF / f"prop_{name}_{suffix}.png", asset_id, {}, from_slices=pre_carved)
+    for asset_id, (filename, slices) in ARTIST_IMPORTS.items():
+        sheet = HANDOFF / filename
+        if "_v1_" in sheet.name:
+            raise ValueError(f"Refusing archived v1 asset: {sheet}")
+        if not sheet.is_file():
+            raise ValueError(f"Missing current artist strip: {sheet}")
+        import_sheet(sheet, asset_id, {"slices": slices}, from_slices=True)
     with Image.open(HANDOFF / "table_wood_tile.png") as tile:
         tile.resize((250, 250), Image.Resampling.NEAREST).save(ASSETS / "table_wood_tile.png", optimize=True)
 

@@ -19,10 +19,13 @@ Review the output in `art/checks/` and reload the game. If the `car` entry in
 game logs a warning and uses the `car_placeholder` entry and
 `public/assets/slices/car_placeholder.png`.
 
-`npm run slice:artist` installs Artist v1's nine props and downsamples the table
-tile. The slicer drops small end views below its 14% area threshold, so it
-reports “Found 2 drawings” on the long pencil and ruler fourviews. The artist
-command uses their supplied strips. To install one strip on its own, run
+`npm run slice:artist` installs the current Artist strips for the hero car and
+all nine props, then downsamples the table tile. It uses the exact current
+filenames (`hero_car_a_slices.png`, `prop_*_slices.png`) and will refuse any
+archived `*_v1_*` path. It does not recarve four-views, so slice-only revisions
+are preserved. The official slicer still reports “Found 2 drawings” on the long
+pencil and ruler fourviews; those stay on the shipped-strip path. To install one
+strip on its own, run
 `npm run slice -- --from-slices art/handoff/prop_pencil_slices.png pencil --slices 12`.
 
 `npm run slice:all` regenerates the original placeholders and preserves every

@@ -47,16 +47,19 @@ describe('car loading', () => {
 })
 
 describe('sprite strips', () => {
-  it('validates the full Artist v1 set in the manifest and keeps a car fallback', () => {
+  it('validates the Artist set in the manifest and keeps a car fallback', () => {
     expect(assetIds).toEqual([
       'car', 'pencil', 'coin', 'ruler', 'mug', 'cereal_box', 'eraser',
       'salt_shaker', 'butter_dish', 'crumb_pile',
     ])
     for (const id of assetIds) {
-      expect(validateEntry(id, manifest[id]).source).toMatch(/^art\/handoff\//)
+      const source = validateEntry(id, manifest[id]).source
+      expect(source).toMatch(/^art\/handoff\//)
+      expect(source).not.toMatch(/_v1_/)
     }
     expect(validateEntry('car_placeholder', manifest.car_placeholder).source).toBe('art/placeholders/car.png')
-    expect(manifest.coin.source).toBe('art/handoff/prop_coin_stack_fourview.png')
+    expect(manifest.coin.source).toBe('art/handoff/prop_coin_stack_slices.png')
+    expect(manifest.car.source).toBe('art/handoff/hero_car_a_slices.png')
     expect(manifest.pencil.source).toBe('art/handoff/prop_pencil_slices.png')
     expect(manifest.ruler.source).toBe('art/handoff/prop_ruler_slices.png')
   })
