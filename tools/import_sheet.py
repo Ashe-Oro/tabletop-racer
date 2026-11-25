@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install sprite strips, direction sheets and ground tiles."""
+"""Install stack strips, direction sheets, flat sprites and ground tiles."""
 import argparse
 import colorsys
 import importlib.util
@@ -44,7 +44,9 @@ PLACEHOLDERS = {
 PICNIC_IDS = tuple(draw.__name__ for draw in PICNIC)
 CAR_SLOTS = tuple(f"car_{number}" for number in range(1, 5))
 CAR_HUES = {"car_2": 0.60, "car_3": 0.10, "car_4": 0.37}
+V3_CAR_NAMES = {"stripe": "car_1", "pickup": "car_2", "f1": "car_3", "taxi": "car_4"}
 CAR_NAMES = {
+    **V3_CAR_NAMES,
     "hero": "car_1", "hero_red": "car_1", "hero_car_a": "car_1",
     "cobalt": "car_2", "cobalt_gt": "car_2",
     "sunburst": "car_3", "emerald": "car_4",
@@ -52,7 +54,8 @@ CAR_NAMES = {
 }
 DIRECTION_NAME = re.compile(r"cars_v3_(.+)_(\d+)dir\.png", re.IGNORECASE)
 PICNIC_NAME = re.compile(r"picnic_([a-z0-9_]+)\.png", re.IGNORECASE)
-GROUND_NAMES = ("checkered_tablecloth", "blanket", "grass", "wood_planks")
+PICNIC_FRAMES = {"ant_walk": 2}
+GROUND_NAMES = ("tablecloth", "grass", "wood")
 GROUND_NAME = re.compile(r"ground_([a-z0-9_]+)\.png", re.IGNORECASE)
 
 
@@ -168,7 +171,7 @@ def direction_slot(name):
     return CAR_NAMES.get(re.sub(r"[ -]+", "_", name.lower()))
 
 
-def import_direction(sheet, asset_id, directions):
+def direction_entry(sheet, asset_id, directions):
     validate_source(sheet)
     if asset_id not in CAR_SLOTS:
         raise ValueError("Direction sheets require a known car name or an explicit car_1–car_4 ID.")
@@ -180,14 +183,49 @@ def import_direction(sheet, asset_id, directions):
         alpha = np.array(image.convert("RGBA"))[:, :, 3].reshape(32, directions, 32)
         if not alpha.any(axis=(0, 2)).all():
             raise ValueError("Direction strip has an empty frame.")
+    return dict(type="direction", directions=directions, slices=directions,
+                sliceWidth=32, sliceHeight=32, source=sheet_source(sheet))
+
+
+def import_directions(sheets):
+    if not sheets:
+        return
     manifest = read_manifest()
-    manifest[asset_id] = dict(type="direction", directions=directions, slices=directions,
-                              sliceWidth=32, sliceHeight=32, source=sheet_source(sheet))
+    manifest.update({asset_id: direction_entry(sheet, asset_id, directions)
+                     for asset_id, (sheet, directions) in sheets.items()})
+    with TemporaryDirectory(dir=ROOT) as temporary:
+        folder = Path(temporary)
+        for asset_id, (sheet, _) in sheets.items():
+            install_png(sheet, ASSETS / "slices" / f"{asset_id}.png", folder)
+        write_manifest(manifest, folder)
+    for asset_id, (_, directions) in sheets.items():
+        print(f"{asset_id}: {directions} directions of 32 × 32 px")
+
+
+def import_sprite(sheet, asset_id, frames):
+    validate_id(asset_id)
+    with Image.open(sheet) as image:
+        if image.format != "PNG" or image.width % frames:
+            raise ValueError(f"Expected a horizontal PNG strip of {frames} equal-width frames.")
+        width, height = image.width // frames, image.height
+        alpha = image.convert("RGBA").getchannel("A")
+        bounds = [alpha.crop((x, 0, x + width, height)).getbbox()
+                  for x in range(0, image.width, width)]
+    if any(box is None for box in bounds):
+        raise ValueError("Flat sprite has an empty frame.")
+    manifest = read_manifest()
+    entry = dict(type="sprite", width=width, height=height, source=sheet_source(sheet),
+                 alphaBounds=[min(box[0] for box in bounds), min(box[1] for box in bounds),
+                              max(box[2] for box in bounds), max(box[3] for box in bounds)])
+    if frames > 1:
+        entry["frames"] = frames
+    manifest[asset_id] = entry
     with TemporaryDirectory(dir=ROOT) as temporary:
         folder = Path(temporary)
         install_png(sheet, ASSETS / "slices" / f"{asset_id}.png", folder)
         write_manifest(manifest, folder)
-    print(f"{asset_id}: {directions} directions of 32 × 32 px")
+    unit = "frame" if frames == 1 else "frames"
+    print(f"{asset_id}: {frames} flat sprite {unit} of {width} × {height} px")
 
 
 def install_png(sheet, target, folder):
@@ -202,8 +240,8 @@ def import_ground(sheet, name):
     if name not in GROUND_NAMES:
         raise ValueError(f"Unknown ground tile {name!r}. Use {', '.join(GROUND_NAMES)}.")
     with Image.open(sheet) as image:
-        if image.format != "PNG":
-            raise ValueError("Ground tiles must be PNGs.")
+        if image.format != "PNG" or image.size != (128, 128):
+            raise ValueError("Ground tiles must be 128 × 128 px PNGs.")
         image.verify()
     target = ASSETS / f"ground_{name}.png"
     manifest = read_manifest()
@@ -229,6 +267,9 @@ def recolor_livery(rgba, shift):
 
 def install_car_variants():
     manifest = read_manifest()
+    slots = [slot for slot in CAR_SLOTS if manifest.get(slot, {}).get("type") != "direction"]
+    if not slots:
+        return
     original = ASSETS / "slices/car.png"
     entry = manifest.get("car")
     if not original.is_file() or not entry:
@@ -237,10 +278,7 @@ def install_car_variants():
         rgba = np.array(image.convert("RGBA"))
     with TemporaryDirectory(dir=ROOT) as temporary:
         folder = Path(temporary)
-        for asset_id in CAR_SLOTS:
-            installed = manifest.get(asset_id, {})
-            if installed.get("type") == "direction":
-                continue
+        for asset_id in slots:
             target = ASSETS / "slices" / f"{asset_id}.png"
             if asset_id == "car_1":
                 install_png(original, target, folder)
@@ -259,15 +297,26 @@ def import_named(sheet, asset_id, overrides, from_slices):
         if overrides or from_slices:
             raise ValueError("Direction sheets use the frame count in their filename.")
         name, count = match.groups()
-        import_direction(sheet, asset_id or direction_slot(name), int(count))
+        slot = direction_slot(name)
+        if name.lower() in V3_CAR_NAMES and (asset_id is None or asset_id == slot):
+            # Artist redraws ship under the same names. Refresh the corresponding sibling
+            # sheets together so a single command keeps the supplied car set in sync.
+            sheets = {sibling_slot: (sibling, 8) for car, sibling_slot in V3_CAR_NAMES.items()
+                      if (sibling := sheet.parent / f"cars_v3_{car}_8dir.png").is_file()}
+            sheets[slot] = sheet, int(count)
+            import_directions(sheets)
+        else:
+            import_directions({asset_id or slot: (sheet, int(count))})
     elif match := GROUND_NAME.fullmatch(sheet.name):
         if asset_id or overrides or from_slices:
             raise ValueError("Ground tiles use their filename and take no slicing options.")
         import_ground(sheet, match[1].lower())
+    elif match := PICNIC_NAME.fullmatch(sheet.name):
+        if overrides or from_slices:
+            raise ValueError("Flat picnic sprites take no slicing options.")
+        name = match[1].lower()
+        import_sprite(sheet, asset_id or name, PICNIC_FRAMES.get(name, 1))
     else:
-        match = PICNIC_NAME.fullmatch(sheet.name)
-        if not asset_id and match:
-            asset_id = match[1].lower()
         if not asset_id:
             raise ValueError("Specify an asset ID or use a recognized v3 filename.")
         if from_slices and overrides.keys() - {"slices"}:
@@ -279,7 +328,6 @@ def import_named(sheet, asset_id, overrides, from_slices):
 
 def artist_directions():
     recognized = {}
-    unnamed = []
     for sheet in sorted(HANDOFF.glob("cars_v3_*dir.png")):
         match = DIRECTION_NAME.fullmatch(sheet.name)
         if not match or "_v1_" in sheet.name:
@@ -287,16 +335,11 @@ def artist_directions():
         name, count = match.groups()
         slot = direction_slot(name)
         if slot is None:
-            unnamed.append((sheet, int(count)))
-            continue
+            raise ValueError(f"Unknown car name {name!r} in {sheet.name}. Use a named or explicit car slot.")
         if slot in recognized:
             raise ValueError(f"Multiple v3 direction sheets target {slot}. Keep one sheet per car.")
         recognized[slot] = sheet, int(count)
-    free_slots = [slot for slot in CAR_SLOTS if slot not in recognized]
-    if len(unnamed) > len(free_slots):
-        raise ValueError("More v3 direction sheets than car slots.")
-    recognized.update(zip(free_slots, unnamed))
-    return recognized
+    return {slot: recognized[slot] for slot in CAR_SLOTS if slot in recognized}
 
 
 def import_artist():
@@ -307,20 +350,14 @@ def import_artist():
             import_sheet(sheet, asset_id, {"slices": slices}, from_slices=True)
         elif not (ASSETS / "slices" / f"{asset_id}.png").is_file():
             raise ValueError(f"Missing current artist strip: {sheet}")
-    wood_tile = HANDOFF / "table_wood_tile.png"
-    if wood_tile.is_file():
-        with Image.open(wood_tile) as tile:
-            tile.resize((250, 250), Image.Resampling.NEAREST).save(ASSETS / "table_wood_tile.png", optimize=True)
-    for asset_id in PICNIC_IDS:
-        sheet = HANDOFF / f"picnic_{asset_id}.png"
-        if sheet.is_file():
+    for sheet in sorted(HANDOFF.glob("picnic_*.png")):
+        if "_v1_" not in sheet.name.lower():
             import_named(sheet, None, {}, False)
     for name in GROUND_NAMES:
         sheet = HANDOFF / f"ground_{name}.png"
         if sheet.is_file():
             import_ground(sheet, name)
-    for asset_id, (sheet, count) in directions.items():
-        import_direction(sheet, asset_id, count)
+    import_directions(directions)
     install_car_variants()
 
 

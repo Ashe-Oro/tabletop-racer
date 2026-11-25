@@ -4,9 +4,10 @@ import { overlaps } from './collision'
 import type { Point } from './geometry'
 import { Race } from './race'
 import {
-  ROUTE_LENGTH, TABLE_HEIGHT, TABLE_WIDTH, TRACK_CONFIG, TRACK_HALF_WIDTH,
+  ANT_WALK_DISTANCE, ROUTE_LENGTH, TABLE_HEIGHT, TABLE_WIDTH, TRACK_CONFIG, TRACK_HALF_WIDTH,
   buildTrack, gates, propIds, route, spawn,
 } from './track'
+import type { PropId } from './track'
 
 describe('picnic circuit', () => {
   it('lays out the table, route, and checkpoints at the tabletop scale', () => {
@@ -27,6 +28,9 @@ describe('picnic circuit', () => {
     const track = buildTrack(footprints)
     expect(buildTrack(footprints, { OBSTACLES: false })).toEqual(track)
     expect(new Set(track.props.map(({ asset }) => asset))).toEqual(new Set(propIds))
+    for (const id of ['napkins', 'sandwich', 'mustard', 'bottle_cap']) {
+      expect(track.props.filter(({ asset }) => asset === id).length).toBeGreaterThan(1)
+    }
 
     for (const middleX of [false, true]) {
       for (const middleY of [false, true]) {
@@ -36,9 +40,12 @@ describe('picnic circuit', () => {
         expect(quadrant.length).toBeGreaterThan(12)
       }
     }
-    expect(track.props.filter(({ asset, x, y }) =>
-      asset === 'ant' && !track.solids.some(solid => overlaps({ x, y, radius: 1 }, solid, 0)),
-    ).length).toBeGreaterThan(20)
+    const ants = track.props.filter(({ asset }) => asset === 'ant' || asset === 'ant_walk')
+    expect(ants.length).toBeGreaterThan(20)
+    for (const { asset, x, y } of ants) {
+      const radius = 5 + (asset === 'ant_walk' ? ANT_WALK_DISTANCE : 0)
+      expect(track.solids.some(solid => overlaps({ x, y, radius }, solid, 0))).toBe(false)
+    }
     expect(track.solids.some(solid => overlaps({ ...spawn, radius: TRACK_HALF_WIDTH }, solid, 0))).toBe(false)
 
     for (const [i, point] of route.entries()) {
@@ -52,6 +59,62 @@ describe('picnic circuit', () => {
         expect(track.solids.some(solid => overlaps(lane, solid, 0))).toBe(false)
       }
     }
+  })
+
+  it('uses each picnic prop’s visible alpha bounds for its circle or oriented box', () => {
+    const { props, solids } = buildTrack(footprints)
+    const round: Partial<Record<PropId, number>> = {
+      plate: 65.5, cup: 32.5, bottle_cap: 10.5, salt_shaker: 12.5,
+    }
+    const boxed: Partial<Record<PropId, [number, number]>> = {
+      basket: [109.5, 102.5], ketchup: [11, 33], mustard: [12, 33],
+      napkins: [30.5, 28], fork: [8, 48.5], sandwich: [39.5, 47.5], watermelon: [36.5, 41],
+    }
+    for (const { asset, x, y, angle } of props) {
+      if (round[asset]) {
+        expect(solids).toContainEqual({ x, y, radius: round[asset] })
+      }
+      const box = boxed[asset]
+      if (box) {
+        const [halfWidth, halfLength] = box
+        expect(solids).toContainEqual({ x, y, angle, halfWidth, halfLength })
+      }
+    }
+
+    const baskets = props.filter(({ asset }) => asset === 'basket')
+    expect(baskets).toHaveLength(8)
+    for (const [i, { x, y, angle }] of baskets.entries()) {
+      const [halfWidth, halfLength] = boxed.basket!
+      const extentX = Math.abs(Math.cos(angle)) * halfWidth + Math.abs(Math.sin(angle)) * halfLength
+      const extentY = Math.abs(Math.sin(angle)) * halfWidth + Math.abs(Math.cos(angle)) * halfLength
+      expect(x - extentX).toBeGreaterThanOrEqual(0)
+      expect(y - extentY).toBeGreaterThanOrEqual(0)
+      expect(x + extentX).toBeLessThanOrEqual(TABLE_WIDTH)
+      expect(y + extentY).toBeLessThanOrEqual(TABLE_HEIGHT)
+      for (const other of baskets.slice(i + 1)) {
+        expect(overlaps({ x, y, angle, halfWidth, halfLength }, { ...other, halfWidth, halfLength }, 0)).toBe(false)
+      }
+    }
+  })
+
+  it('trims transparent margins from a stacked prop’s footprint bitmap', () => {
+    const { coin } = footprints
+    const footprint = new Uint8Array(coin.sliceWidth * coin.sliceHeight)
+    footprint.fill(1, coin.sliceWidth, footprint.length - coin.sliceWidth)
+    const { props, solids } = buildTrack({ ...footprints, coin: { ...coin, footprint } })
+    const { x, y } = props.find(({ asset }) => asset === 'coin')!
+    expect(solids).toContainEqual({ x, y, radius: 8 })
+  })
+
+  it('rotates the center offset of a sprite with asymmetric padding', () => {
+    const { ketchup } = footprints
+    const { props, solids } = buildTrack({ ...footprints, ketchup: { ...ketchup, width: ketchup.width + 4 } })
+    const bottle = props.find(({ asset, x }) => asset === 'ketchup' && x === 2520)!
+    const { x, y, angle } = bottle
+    expect(solids).toContainEqual({
+      x: x - 2 * Math.cos(angle), y: y - 2 * Math.sin(angle), angle,
+      halfWidth: 11, halfLength: 33,
+    })
   })
 
   it('keeps the scattered scenery and adds collidable in-lane challenges only when enabled', () => {
@@ -81,6 +144,8 @@ describe('picnic circuit', () => {
       }
       expect(passed).toEqual(gates.slice(1).map((_, i) => i + 1))
       expect(race.lapTimesMs).toHaveLength(lap + 1)
+      expect(race.checkpoint).toBe(0)
+      expect(race.lap).toBe(Math.min(lap + 2, 3))
       expect(race.finished).toBe(lap === 2)
     }
   })

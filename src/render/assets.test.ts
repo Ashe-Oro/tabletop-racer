@@ -11,7 +11,7 @@ const entry = { slices: 16, sliceWidth: 20, sliceHeight: 36, source: 'art/placeh
 const carIds = cars.map(({ id }) => id)
 const directionEntry = (directions: number) => ({
   type: 'direction' as const, directions, slices: directions, sliceWidth: 32, sliceHeight: 32,
-  source: 'art/handoff/cars_v3_hero_red_8dir.png',
+  source: 'art/handoff/cars_v3_stripe_8dir.png',
 })
 
 describe('car loading', () => {
@@ -22,7 +22,7 @@ describe('car loading', () => {
 
   it.each(['invalid manifest entry', 'missing strip', 'wrong strip dimensions'])('uses the placeholder for a %s', async failure => {
     const fallback = { slices: 1, sliceWidth: 1, sliceHeight: 1, source: 'art/placeholders/car.png' }
-    const hero = { ...fallback, source: 'art/handoff/hero_car_a_fourview.png' }
+    const hero = directionEntry(8)
     const fixtures = {
       ...Object.fromEntries([...propIds, ...carIds].map(id => [id, fallback])),
       car_1: failure === 'invalid manifest entry' ? { ...hero, slices: 0 } : hero,
@@ -35,7 +35,7 @@ describe('car loading', () => {
     vi.stubGlobal('fetch', async () => Response.json(fixtures))
     vi.stubGlobal('Image', class {
       src = ''
-      get naturalHeight() { return this.src.endsWith('/car_2.png') ? 32 : 1 }
+      get naturalHeight() { return /\/car_[12]\.png$/.test(this.src) ? 32 : 1 }
       get naturalWidth() {
         if (this.src.endsWith('/car_1.png')) return 2
         if (this.src.endsWith('/car_2.png')) return 512
@@ -131,6 +131,51 @@ describe('sprite strips', () => {
       { ...entry, type: 'animated' }]) {
       expect(() => validateEntry('car_1', bad)).toThrow(/manifest entry/)
     }
+  })
+
+  it.each([
+    ['car_1', 'stripe', 'Stripe', '#e23a2b'],
+    ['car_2', 'pickup', 'Pickup', '#c43c2b'],
+    ['car_3', 'f1', 'F1', '#4c8ee7'],
+    ['car_4', 'taxi', 'Taxi', '#f0c53a'],
+  ] as const)('installs %s from the %s strip', (id, slug, name, color) => {
+    const parsed = validateEntry(id, manifest[id])
+    expect(parsed).toEqual({
+      ...directionEntry(8), source: `art/handoff/cars_v3_${slug}_8dir.png`,
+    })
+    expect(() => validateStrip(id, parsed, 256, 32)).not.toThrow()
+    expect(cars.find(car => car.id === id)).toEqual({ id, name, color })
+  })
+
+  it.each([
+    ['basket', 223, 209, [2, 2, 221, 207]],
+    ['plate', 133, 135, [2, 2, 131, 133]],
+    ['sandwich', 83, 99, [2, 2, 81, 97]],
+    ['watermelon', 77, 86, [2, 2, 75, 84]],
+    ['ketchup', 26, 70, [2, 2, 24, 68]],
+    ['mustard', 28, 70, [2, 2, 26, 68]],
+    ['fork', 20, 101, [2, 2, 18, 99]],
+    ['napkins', 65, 60, [2, 2, 63, 58]],
+    ['cup', 46, 69, [2, 2, 44, 67]],
+    ['bottle_cap', 25, 24, [2, 3, 23, 21]],
+    ['ant', 16, 16, [3, 5, 12, 11]],
+    ['ant_walk', 16, 16, [3, 5, 12, 11]],
+  ] as const)('validates the %s flat sprite at its native dimensions', (id, width, height, alphaBounds) => {
+    const parsed = validateEntry(id, manifest[id])
+    expect(parsed).toMatchObject({ type: 'sprite', width, height, alphaBounds, source: `art/handoff/picnic_${id}.png` })
+    const frames = id === 'ant_walk' ? 2 : 1
+    expect(() => validateStrip(id, parsed, width * frames, height)).not.toThrow()
+    expect(() => validateStrip(id, parsed, width * frames, height + 1)).toThrow()
+  })
+
+  it('rejects invalid flat sprite sizes, frame counts and alpha bounds', () => {
+    const entry = manifest.ant_walk
+    for (const bad of [{ ...entry, width: 0 }, { ...entry, height: 1.5 }, { ...entry, frames: 0 },
+      { ...entry, alphaBounds: undefined }, { ...entry, alphaBounds: [3, 5, 3, 11] },
+      { ...entry, alphaBounds: [3, 5, 17, 11] }, { ...entry, alphaBounds: [-1, 5, 12, 11] }]) {
+      expect(() => validateEntry('ant_walk', bad)).toThrow(/flat sprite manifest entry/)
+    }
+    expect(() => validateStrip('ant_walk', validateEntry('ant_walk', entry), 16, 16)).toThrow(/expected 32×16/)
   })
 
   it('uses an integer zoom for both gameplay viewport sizes', () => {

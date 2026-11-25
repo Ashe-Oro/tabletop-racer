@@ -1,17 +1,27 @@
 import type { Car } from '../game/car'
 import { CAR_LENGTH, cars } from '../game/cars'
 import { clamp } from '../game/geometry'
-import { TABLE_HEIGHT, TABLE_WIDTH, spawn } from '../game/track'
+import { ANT_WALK_DISTANCE, TABLE_HEIGHT, TABLE_WIDTH, spawn } from '../game/track'
 import type { Prop } from '../game/track'
-import type { Assets } from './assets'
+import type { Assets, FlatAsset } from './assets'
 import { DirectionSprite } from './direction'
 import type { TireEffects } from './effects'
+import { FlatSprite } from './flat'
 import { SQUASH, StackSprite, carTurn } from './stack'
 import type { Table } from './table'
 
 const TURN_STEPS = 128
 const TURN_STEP = Math.PI * 2 / TURN_STEPS
 const OVERVIEW_MARGIN = 128
+const ANT_LEG_SECONDS = 1.25
+
+interface SceneryItem {
+  prop: Prop
+  x: number
+  y: number
+  angle: number
+  sprite: FlatSprite | StackSprite
+}
 
 export function viewportScale(width: number, height: number) {
   return width >= 670 && height >= 420 ? 2 : 1
@@ -20,9 +30,11 @@ export function viewportScale(width: number, height: number) {
 export class Scene {
   private readonly ctx: CanvasRenderingContext2D
   private readonly vehicles: (StackSprite | DirectionSprite)[]
-  private readonly scenery: { x: number, y: number, sprite: StackSprite }[]
+  private readonly scenery: SceneryItem[]
+  private readonly walkingAnts: SceneryItem[]
   private readonly turns: number[] = []
   private camera = { x: spawn.x, y: spawn.y }
+  private sceneryTime = 0
   scale = 1
 
   constructor(private readonly canvas: HTMLCanvasElement, private readonly table: Table,
@@ -35,12 +47,22 @@ export class Scene {
       return asset.type === 'direction' ? new DirectionSprite(asset)
         : new StackSprite(asset, false, CAR_LENGTH / asset.sliceHeight)
     })
+    const flatSprites = new Map<FlatAsset, FlatSprite>()
     this.scenery = props.map(prop => {
       const asset = assets[prop.asset]
+      if (asset.type === 'sprite') {
+        let sprite = flatSprites.get(asset)
+        if (!sprite) {
+          sprite = new FlatSprite(asset)
+          flatSprites.set(asset, sprite)
+        }
+        return { x: prop.x, y: prop.y, angle: prop.angle, prop, sprite }
+      }
       const sprite = new StackSprite(asset, asset.slices >= 36)
       sprite.bake(prop.angle)
-      return { x: prop.x, y: prop.y, sprite }
+      return { x: prop.x, y: prop.y, angle: prop.angle, prop, sprite }
     }).sort((a, b) => a.y - b.y)
+    this.walkingAnts = this.scenery.filter(({ prop, sprite }) => prop.asset === 'ant_walk' && sprite instanceof FlatSprite)
   }
 
   resetCamera() {
@@ -76,6 +98,17 @@ export class Scene {
     this.table.draw(ctx, left, top, scale, width, height)
     effects.draw(ctx, left, top, scale)
 
+    this.sceneryTime += dt
+    for (const ant of this.walkingAnts) {
+      const { prop } = ant
+      const phase = (this.sceneryTime / ANT_LEG_SECONDS + prop.x / 19) % 2
+      const distance = (1 - Math.abs(phase - 1)) * ANT_WALK_DISTANCE
+      ant.x = prop.x + Math.cos(prop.angle) * distance
+      ant.y = prop.y + Math.sin(prop.angle) * distance
+      ant.angle = prop.angle + (phase >= 1 ? Math.PI : 0)
+    }
+    if (this.walkingAnts.length) this.scenery.sort((a, b) => a.y - b.y)
+
     const vehicle = this.vehicles[carIndex]
     if (vehicle instanceof DirectionSprite) {
       vehicle.bake(car.heading)
@@ -87,16 +120,20 @@ export class Scene {
         this.turns[carIndex] = wrapped
       }
     }
-    const stack = { ...car.position, sprite: vehicle }
-    const drawSprite = (item: typeof stack, layer: 'shadow' | 'body', lift = 0) => {
+    const stack = { ...car.position, sprite: vehicle, angle: car.heading }
+    const drawSprite = (item: SceneryItem | typeof stack, layer: 'shadow' | 'body', lift = 0) => {
       const x = left + item.x * scale
       const y = top + item.y * SQUASH * scale
       if (x < -160 * scale || x > width + 160 * scale || y < -125 * scale || y > height + 165 * scale) return
-      item.sprite.draw(ctx, x, y, scale, layer, lift)
+      if (item.sprite instanceof FlatSprite) {
+        item.sprite.draw(ctx, x, y, scale, layer, item.angle, this.sceneryTime + item.x / 19)
+      } else {
+        item.sprite.draw(ctx, x, y, scale, layer, lift)
+      }
     }
     for (const item of this.scenery) drawSprite(item, 'shadow')
     drawSprite(stack, 'shadow')
-    // Insert the moving car in the stationary sequence at its ground contact.
+    // Insert the car at its ground contact for depth ordering.
     let carDrawn = false
     for (const item of this.scenery) {
       if (!carDrawn && item.y > stack.y) {

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
@@ -32,8 +32,10 @@ export default defineConfig({
           .filter(name => name.endsWith('.png'))
           .sort()
           .map(name => [name.slice(0, -4), pngDataUrl(`slices/${name}`)]))
-        const ground = Object.fromEntries(Object.values(manifest.ground ?? {})
-          .map(name => [name, pngDataUrl(name as string)]))
+        const ground = Object.fromEntries((Object.values(manifest.ground ?? {}) as string[])
+          .filter(name => existsSync(new URL(name, assetRoot)))
+          .sort()
+          .map(name => [name, pngDataUrl(name)]))
 
         return `
           const slices = ${JSON.stringify(slices)}
@@ -43,10 +45,8 @@ export default defineConfig({
             if (!Object.hasOwn(slices, id)) throw new Error('Missing embedded sprite: ' + id)
             return slices[id]
           }
-          export const tableTileUrl = ${JSON.stringify(pngDataUrl('table_wood_tile.png'))}
           export function groundUrl(name) {
-            if (!Object.hasOwn(ground, name)) throw new Error('Missing embedded ground tile: ' + name)
-            return ground[name]
+            return Object.hasOwn(ground, name) ? ground[name] : undefined
           }
         `
       },

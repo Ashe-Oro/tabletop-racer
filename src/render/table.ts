@@ -1,12 +1,11 @@
 import { TABLE_HEIGHT, TABLE_WIDTH, gates, route } from '../game/track'
-import { groundUrl, loadManifest, tableTileUrl } from './asset-source'
+import { groundUrl, loadManifest } from './asset-source'
 import { makeCanvas } from './assets'
 import { SQUASH } from './stack'
 
 export const EDGE = 80
 const depth = TABLE_HEIGHT * SQUASH
 const cloth = { x: 2508, y: Math.round(250 * SQUASH), width: 1600, height: Math.round(2520 * SQUASH) }
-const blanket = { x: -360, y: 780, width: 1790, height: depth - 325 }
 
 function grain(seed: number) {
   return () => {
@@ -29,41 +28,15 @@ function grassTile() {
   return canvas
 }
 
-function blanketTile() {
-  const { canvas, ctx } = makeCanvas(96, 72)
-  const rand = grain(18)
-  ctx.fillStyle = '#3e736e'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-  for (const x of [5, 41, 77]) {
-    ctx.fillStyle = '#6f9c87'
-    ctx.fillRect(x, 0, 13, canvas.height)
-    ctx.fillStyle = '#9ab29b'
-    ctx.fillRect(x + 13, 0, 3, canvas.height)
-  }
-  for (const y of [1, 25, 49]) {
-    ctx.fillStyle = '#92b7a64a'
-    ctx.fillRect(0, y, canvas.width, 11)
-    ctx.fillStyle = '#9ab29b9a'
-    ctx.fillRect(0, y + 11, canvas.width, 2)
-  }
-  ctx.fillStyle = '#203e3b29'
-  for (let i = 0; i < 420; i++) {
-    ctx.fillRect(Math.floor(rand() * canvas.width), Math.floor(rand() * canvas.height), 1, 1)
-  }
-  return canvas
-}
-
 function tableclothTile() {
   const cell = 56
-  const cellHeight = Math.round(cell * SQUASH)
-  const { canvas, ctx } = makeCanvas(cell * 2, cellHeight * 2)
+  const { canvas, ctx } = makeCanvas(cell * 2, cell * 2)
   const rand = grain(11)
-  ctx.fillStyle = '#e19277'
+  ctx.fillStyle = '#f2d8ad'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.fillStyle = '#b95147'
-  ctx.fillRect(0, 0, cell, cellHeight)
-  ctx.fillStyle = '#f2d8ad'
-  ctx.fillRect(cell, cellHeight, cell, cellHeight)
+  ctx.fillRect(0, 0, cell, cell)
+  ctx.fillRect(cell, cell, cell, cell)
   for (let y = 1; y < canvas.height; y += 3) {
     ctx.fillStyle = '#6e362118'
     ctx.fillRect(0, y, canvas.width, 1)
@@ -128,7 +101,7 @@ function routeMarks() {
   return { scuffs, crumbs, arrows }
 }
 
-const groundKeys = ['wood_planks', 'checkered_tablecloth', 'blanket', 'grass'] as const
+const groundKeys = ['wood', 'tablecloth', 'grass'] as const
 type GroundKey = typeof groundKeys[number]
 type Textures = Record<GroundKey, HTMLImageElement | HTMLCanvasElement>
 
@@ -141,13 +114,13 @@ async function loadTexture(url: string | undefined, fallback: () => HTMLCanvasEl
 
 export async function loadTable() {
   const manifest = await loadManifest() as { ground?: Partial<Record<GroundKey, string>> }
-  const fallback = { wood_planks: woodTile, checkered_tablecloth: tableclothTile, blanket: blanketTile, grass: grassTile }
+  const fallback = { wood: woodTile, tablecloth: tableclothTile, grass: grassTile }
   const textures = Object.fromEntries(await Promise.all(groundKeys.map(async key => {
     const filename = manifest.ground?.[key]
-    const url = filename ? groundUrl(filename) : key === 'wood_planks' ? tableTileUrl : undefined
+    const url = filename ? groundUrl(filename) : undefined
     return [key, await loadTexture(url, fallback[key])]
   }))) as Textures
-  return new Table(textures, !manifest.ground?.wood_planks)
+  return new Table(textures)
 }
 
 export class Table {
@@ -156,7 +129,7 @@ export class Table {
   private readonly stitches = makeCanvas(12, 8).canvas
   private stitchPattern?: CanvasPattern | null
 
-  constructor(private readonly textures: Textures, private readonly plankDetail: boolean) {
+  constructor(private readonly textures: Textures) {
     const ctx = this.stitches.getContext('2d')!
     ctx.fillStyle = '#7b3b3190'
     ctx.fillRect(2, 5, 5, 1)
@@ -165,27 +138,22 @@ export class Table {
   }
 
   draw(ctx: CanvasRenderingContext2D, left: number, top: number, scale: number, width: number, height: number) {
-    this.patterns ??= Object.fromEntries(groundKeys.map(key => [
-      key, ctx.createPattern(this.textures[key], 'repeat'),
-    ])) as Record<GroundKey, CanvasPattern | null>
+    this.patterns ??= Object.fromEntries(groundKeys.map(key => {
+      const pattern = ctx.createPattern(this.textures[key], 'repeat')
+      pattern?.setTransform(new DOMMatrix().scaleSelf(1, SQUASH))
+      return [key, pattern]
+    })) as Record<GroundKey, CanvasPattern | null>
     const patterns = this.patterns
     const panorama = scale < 1
     // Align the base and props to whole screen pixels at normal gameplay zoom.
     left = panorama ? left : Math.round(left)
     top = panorama ? top : Math.round(top)
     ctx.save()
+    ctx.imageSmoothingEnabled = false
     ctx.translate(left, top)
     ctx.scale(scale, scale)
     ctx.fillStyle = patterns.grass ?? '#557849'
     ctx.fillRect(-left / scale, -top / scale, width / scale, height / scale)
-
-    ctx.fillStyle = '#273b3b64'
-    ctx.fillRect(blanket.x + 10, blanket.y + 14, blanket.width, blanket.height)
-    ctx.fillStyle = patterns.blanket ?? '#3e736e'
-    ctx.fillRect(blanket.x, blanket.y, blanket.width, blanket.height)
-    ctx.strokeStyle = '#a6b59d'
-    ctx.lineWidth = 4
-    ctx.strokeRect(blanket.x + 5, blanket.y + 5, blanket.width - 10, blanket.height - 10)
 
     ctx.fillStyle = '#30291e55'
     ctx.fillRect(12, 11, TABLE_WIDTH + 8, depth + 27)
@@ -195,11 +163,10 @@ export class Table {
     ctx.fillRect(-2, 0, TABLE_WIDTH + 4, depth + 20)
     ctx.fillStyle = '#ac7243'
     ctx.fillRect(0, depth + 6, TABLE_WIDTH, 8)
-    ctx.fillStyle = patterns.wood_planks ?? '#bd8950'
+    ctx.fillStyle = patterns.wood ?? '#bd8950'
     ctx.fillRect(0, 0, TABLE_WIDTH, depth)
 
-    if (this.plankDetail) this.drawPlankDetail(ctx)
-    this.drawCloth(ctx, patterns.checkered_tablecloth ?? '#b95147')
+    this.drawCloth(ctx, patterns.tablecloth ?? '#b95147')
     this.drawCues(ctx)
     ctx.strokeStyle = '#f5c47b'
     ctx.lineWidth = 2
@@ -208,28 +175,6 @@ export class Table {
     ctx.lineWidth = 1
     ctx.strokeRect(7, 7, TABLE_WIDTH - 14, depth - 14)
     ctx.restore()
-  }
-
-  private drawPlankDetail(ctx: CanvasRenderingContext2D) {
-    const board = 125
-    for (let y = board; y < depth; y += board) {
-      if (y % (board * 2)) {
-        ctx.fillStyle = '#8b512845'
-        ctx.fillRect(0, y, TABLE_WIDTH, Math.min(board, depth - y))
-      }
-      ctx.fillStyle = '#8a512875'
-      ctx.fillRect(0, y, TABLE_WIDTH, 2)
-      ctx.fillStyle = '#f3bd736f'
-      ctx.fillRect(0, y + 2, TABLE_WIDTH, 1)
-    }
-    for (const x of [24, TABLE_WIDTH - 28]) {
-      for (let y = 18; y < depth - 10; y += board) {
-        ctx.fillStyle = '#8152309c'
-        ctx.fillRect(x, y, 4, 3)
-        ctx.fillStyle = '#f2be80a8'
-        ctx.fillRect(x + 1, y + 3, 3, 1)
-      }
-    }
   }
 
   private drawCloth(ctx: CanvasRenderingContext2D, pattern: CanvasPattern | string) {

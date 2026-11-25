@@ -1,15 +1,52 @@
 {
   "ant": {
-    "sliceHeight": 10,
-    "sliceWidth": 8,
-    "slices": 4,
-    "source": "art/placeholders/ant.png"
+    "alphaBounds": [
+      3,
+      5,
+      12,
+      11
+    ],
+    "height": 16,
+    "source": "art/handoff/picnic_ant.png",
+    "type": "sprite",
+    "width": 16
+  },
+  "ant_walk": {
+    "alphaBounds": [
+      3,
+      5,
+      12,
+      11
+    ],
+    "frames": 2,
+    "height": 16,
+    "source": "art/handoff/picnic_ant_walk.png",
+    "type": "sprite",
+    "width": 16
   },
   "basket": {
-    "sliceHeight": 136,
-    "sliceWidth": 192,
-    "slices": 56,
-    "source": "art/placeholders/basket.png"
+    "alphaBounds": [
+      2,
+      2,
+      221,
+      207
+    ],
+    "height": 209,
+    "source": "art/handoff/picnic_basket.png",
+    "type": "sprite",
+    "width": 223
+  },
+  "bottle_cap": {
+    "alphaBounds": [
+      2,
+      3,
+      23,
+      21
+    ],
+    "height": 24,
+    "source": "art/handoff/picnic_bottle_cap.png",
+    "type": "sprite",
+    "width": 25
   },
   "butter_dish": {
     "sliceHeight": 37,
@@ -24,32 +61,36 @@
     "source": "art/handoff/hero_car_a_slices.png"
   },
   "car_1": {
-    "sliceHeight": 71,
-    "sliceWidth": 43,
-    "slices": 36,
-    "source": "art/handoff/hero_car_a_slices.png",
-    "type": "stack"
+    "directions": 8,
+    "sliceHeight": 32,
+    "sliceWidth": 32,
+    "slices": 8,
+    "source": "art/handoff/cars_v3_stripe_8dir.png",
+    "type": "direction"
   },
   "car_2": {
-    "sliceHeight": 71,
-    "sliceWidth": 43,
-    "slices": 36,
-    "source": "art/handoff/hero_car_a_slices.png",
-    "type": "stack"
+    "directions": 8,
+    "sliceHeight": 32,
+    "sliceWidth": 32,
+    "slices": 8,
+    "source": "art/handoff/cars_v3_pickup_8dir.png",
+    "type": "direction"
   },
   "car_3": {
-    "sliceHeight": 71,
-    "sliceWidth": 43,
-    "slices": 36,
-    "source": "art/handoff/hero_car_a_slices.png",
-    "type": "stack"
+    "directions": 8,
+    "sliceHeight": 32,
+    "sliceWidth": 32,
+    "slices": 8,
+    "source": "art/handoff/cars_v3_f1_8dir.png",
+    "type": "direction"
   },
   "car_4": {
-    "sliceHeight": 71,
-    "sliceWidth": 43,
-    "slices": 36,
-    "source": "art/handoff/hero_car_a_slices.png",
-    "type": "stack"
+    "directions": 8,
+    "sliceHeight": 32,
+    "sliceWidth": 32,
+    "slices": 8,
+    "source": "art/handoff/cars_v3_taxi_8dir.png",
+    "type": "direction"
   },
   "car_placeholder": {
     "sliceHeight": 36,
@@ -76,10 +117,16 @@
     "source": "art/handoff/prop_crumb_pile_slices.png"
   },
   "cup": {
-    "sliceHeight": 48,
-    "sliceWidth": 48,
-    "slices": 48,
-    "source": "art/placeholders/cup.png"
+    "alphaBounds": [
+      2,
+      2,
+      44,
+      67
+    ],
+    "height": 69,
+    "source": "art/handoff/picnic_cup.png",
+    "type": "sprite",
+    "width": 46
   },
   "eraser": {
     "sliceHeight": 34,
@@ -88,16 +135,33 @@
     "source": "art/handoff/prop_eraser_slices.png"
   },
   "fork": {
-    "sliceHeight": 156,
-    "sliceWidth": 22,
-    "slices": 8,
-    "source": "art/placeholders/fork.png"
+    "alphaBounds": [
+      2,
+      2,
+      18,
+      99
+    ],
+    "height": 101,
+    "source": "art/handoff/picnic_fork.png",
+    "type": "sprite",
+    "width": 20
+  },
+  "ground": {
+    "grass": "ground_grass.png",
+    "tablecloth": "ground_tablecloth.png",
+    "wood": "ground_wood.png"
   },
   "ketchup": {
-    "sliceHeight": 84,
-    "sliceWidth": 38,
-    "slices": 28,
-    "source": "art/placeholders/ketchup.png"
+    "alphaBounds": [
+      2,
+      2,
+      24,
+      68
+    ],
+    "height": 70,
+    "source": "art/handoff/picnic_ketchup.png",
+    "type": "sprite",
+    "width": 26
   },
   "mug": {
     "sliceHeight": 60,
@@ -105,11 +169,29 @@
     "slices": 60,
     "source": "art/handoff/prop_mug_slices.png"
   },
-  "napkin": {
-    "sliceHeight": 96,
-    "sliceWidth": 96,
-    "slices": 6,
-    "source": "art/placeholders/napkin.png"
+  "mustard": {
+    "alphaBounds": [
+      2,
+      2,
+      26,
+      68
+    ],
+    "height": 70,
+    "source": "art/handoff/picnic_mustard.png",
+    "type": "sprite",
+    "width": 28
+  },
+  "napkins": {
+    "alphaBounds": [
+      2,
+      2,
+      63,
+      58
+    ],
+    "height": 60,
+    "source": "art/handoff/picnic_napkins.png",
+    "type": "sprite",
+    "width": 65
   },
   "pencil": {
     "sliceHeight": 147,
@@ -118,10 +200,16 @@
     "source": "art/handoff/prop_pencil_slices.png"
   },
   "plate": {
-    "sliceHeight": 120,
-    "sliceWidth": 120,
-    "slices": 10,
-    "source": "art/placeholders/plate.png"
+    "alphaBounds": [
+      2,
+      2,
+      131,
+      133
+    ],
+    "height": 135,
+    "source": "art/handoff/picnic_plate.png",
+    "type": "sprite",
+    "width": 133
   },
   "ruler": {
     "sliceHeight": 169,
@@ -135,10 +223,28 @@
     "slices": 44,
     "source": "art/handoff/prop_salt_shaker_slices.png"
   },
+  "sandwich": {
+    "alphaBounds": [
+      2,
+      2,
+      81,
+      97
+    ],
+    "height": 99,
+    "source": "art/handoff/picnic_sandwich.png",
+    "type": "sprite",
+    "width": 83
+  },
   "watermelon": {
-    "sliceHeight": 68,
-    "sliceWidth": 84,
-    "slices": 16,
-    "source": "art/placeholders/watermelon.png"
+    "alphaBounds": [
+      2,
+      2,
+      75,
+      84
+    ],
+    "height": 86,
+    "source": "art/handoff/picnic_watermelon.png",
+    "type": "sprite",
+    "width": 77
   }
 }

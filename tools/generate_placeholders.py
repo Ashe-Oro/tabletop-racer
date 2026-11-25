@@ -350,7 +350,7 @@ def ketchup():
     return top, side, end, back
 
 
-def napkin():
+def napkins():
     top, d = view(96, 96)
     d.polygon([(6, 0), (90, 0), (95, 86), (90, 95), (0, 92), (0, 6)],
               fill="#efe1bf")
@@ -408,7 +408,7 @@ def ant():
     return top, side, end, end
 
 
-PICNIC = (plate, cup, basket, watermelon, ketchup, napkin, fork, ant)
+PICNIC = (plate, cup, basket, watermelon, ketchup, napkins, fork, ant)
 ORIGINALS = (car, pencil, coin, ruler, mug, cereal_box)
 
 

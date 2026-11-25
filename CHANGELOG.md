@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.0 — Artist v3 picnic art
+
+- Installed eight-direction Stripe, Pickup, F1, and Taxi sheets with the Artist's east and west redraws. The stack placeholder remains available if a car sheet fails to load.
+- Added native-scale picnic sprites, including the revised plate and condiment bottles, sandwiches, bottle caps, and walking ants. Solid sprite footprints use visible alpha bounds. Picnic setups leave the default route clear.
+- Tiled the tablecloth, grass border, and wood with Artist's 128 × 128 textures.
+- Updated the Artist importer and offline release for the v3 art. Added a gameplay close-up, car-select composite, and driving clip.
+
 ## 2.0.0 — Picnic Circuit
 
 - Reduced Hero Car A's nominal footprint from 43 × 71 to 14.54 × 24 art px, with matching collision and tire effects. Retuned steering, speed, and handbrake grip.

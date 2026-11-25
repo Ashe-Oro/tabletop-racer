@@ -2,16 +2,16 @@
 
 ## v3 asset naming
 
-The import conventions below also apply when the Artist delivery includes a
-`README_v3.md`. Drop source PNGs in this directory and run
-`npm run slice:artist` from the repository root. To install a single v3 PNG,
-pass its path to `npm run slice --`.
+The source PNGs described in [README_v3.md](README_v3.md) use the conventions
+below. Drop source PNGs in this directory and run `npm run slice:artist`
+from the repository root. To import by filename, pass the path to
+`npm run slice --`.
 
 | File | Format | Single-file import |
 | --- | --- | --- |
-| `cars_v3_<name>_8dir.png`, `_16dir.png` or `_32dir.png` | Horizontal strip of 32 × 32 px frames | `npm run slice -- art/handoff/cars_v3_cobalt_gt_16dir.png` |
-| `picnic_<item>.png` | Four equally scaled orthographic views | `npm run slice -- art/handoff/picnic_watermelon.png` |
-| `ground_<name>.png` | Seamless PNG texture tile | `npm run slice -- art/handoff/ground_checkered_tablecloth.png` |
+| `cars_v3_<name>_8dir.png`, `_16dir.png` or `_32dir.png` | Horizontal strip of 32 × 32 px frames | `npm run slice -- art/handoff/cars_v3_stripe_8dir.png` |
+| `picnic_<item>.png` | Transparent top-down sprite at native pixel size | `npm run slice -- art/handoff/picnic_watermelon.png` |
+| `ground_<name>.png` | Seamless 128 × 128 px tile | `npm run slice -- art/handoff/ground_tablecloth.png` |
 
 Keep the car pivot at the center of each frame and the body about 24 art px
 long. Frame 0 faces east (+X), and each frame advances clockwise by one equal
@@ -19,16 +19,31 @@ angle. The eight compass points are E, SE, S, SW, W, NW, N, NE. For 16 or 32
 frames, draw the evenly spaced intervening angles. Leave the background
 transparent and keep cast shadows out of the frames.
 
-The names `hero_red`, `cobalt_gt`, `sunburst` and `emerald` map to
-`car_1` through `car_4`. You can also name the sheets by slot
-(`cars_v3_car_1_8dir.png`) or pass a slot as the second argument. Bulk import
-assigns unrecognized names to the remaining slots in filename order. Supply
-one sheet per slot.
+| v3 car | Slot |
+| --- | --- |
+| `stripe` | `car_1` |
+| `pickup` | `car_2` |
+| `f1` | `car_3` |
+| `taxi` | `car_4` |
 
-Picnic preset names are `plate`, `cup`, `basket`, `watermelon`, `ketchup`,
-`napkin`, `fork` and `ant`. Supported ground names are
-`checkered_tablecloth`, `blanket`, `grass` and `wood_planks`.
-The importer keeps ground tiles at their native size.
+When the v3 sheets are together, importing a named car refreshes all four
+supplied sheets, including when you pass its matching slot explicitly
+(`npm run slice -- art/handoff/cars_v3_stripe_8dir.png car_1`). Bulk import
+uses the same mapping. Legacy names `hero_red`, `cobalt_gt`, `sunburst` and
+`emerald` remain aliases. A standalone custom sheet can use its slot in
+the filename or accept the slot as the second argument. For bulk import,
+supply one sheet per slot.
+
+The v3 picnic set uses `basket`, `plate`, `sandwich`, `watermelon`,
+`ketchup`, `mustard`, `fork`, `napkins`, `cup`, `bottle_cap`, `ant` and
+`ant_walk`. Use a centered pivot, with one art pixel per world pixel. The
+importer copies the PNG and records its visible alpha bounds from the
+frames. Each PNG has one frame except `picnic_ant_walk.png`, which has two
+side-by-side 16 × 16 px frames facing east. Cars and flat sprites bypass
+the orthographic slicer.
+
+Ground tile names are `tablecloth`, `grass` and `wood`. The importer copies
+them at native size.
 
 ## Orthographic sheets and existing stacks
 
@@ -47,9 +62,9 @@ presets. Use `--slices N` to set the stack height. Review the output in
 refreshes the stack liveries where no direction sheet is installed.
 
 The bulk Artist command also installs any current legacy strips in this
-directory and downsamples `table_wood_tile.png`. It skips legacy originals
-absent from a checkout when their installed copies are available. It uses
-the shipped strips to preserve slice-only revisions and skips archived
+directory. It skips legacy originals absent from a checkout when their
+installed copies are available. It uses the shipped strips to preserve
+slice-only revisions and skips archived
 `*_v1_*` material. To install one pre-carved strip, run
 `npm run slice -- --from-slices art/handoff/prop_pencil_slices.png pencil --slices 12`.
 
