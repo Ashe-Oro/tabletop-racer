@@ -32,6 +32,7 @@ export class Car {
   boostTimer = 0
   speedScale = 1
   spinTimer = 0
+  respawnBlink = 0
   private contactCooldown = 0
   private contactSteeringTime = 0
   readonly axle = CAR_AXLE
@@ -42,6 +43,16 @@ export class Car {
   get speed() { return Math.hypot(this.velocity.x, this.velocity.y) }
   get speedCap() { return TOP_SPEED * this.speedScale * (this.boostTimer > 0 ? this.boostMultiplier : 1) }
   get mass() { return this.spec.mass }
+
+  respawn(position: Point, heading: number) {
+    this.position = { ...position }
+    this.heading = heading
+    this.velocity = { x: 0, y: 0 }
+    this.drifting = false
+    this.slip = this.bump = this.spinTimer = 0
+    this.contactCooldown = this.contactSteeringTime = 0
+    this.respawnBlink = 1
+  }
 
   setBoost(multiplier: number, duration: number) {
     this.boostMultiplier = Math.max(1, multiplier)

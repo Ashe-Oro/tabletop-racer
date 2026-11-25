@@ -1,8 +1,15 @@
-import { delta, dot } from './geometry'
+import { clamp, delta, dot } from './geometry'
 import type { Point } from './geometry'
 
 export const TOTAL_LAPS = 3
+const MAX_LAPS = 9
 export const BEST_LAP_KEY = 'tabletop_racer_picnic_best_lap_ms'
+
+export function parseLapsParam(value: string | null): number {
+  if (value === null || !/^\d+$/.test(value)) return TOTAL_LAPS
+  const laps = Number(value)
+  return laps >= 1 && laps <= MAX_LAPS ? laps : TOTAL_LAPS
+}
 
 export interface Gate extends Point {
   forward: Point
@@ -24,20 +31,22 @@ export function gateCrossing(from: Point, to: Point, gate: Gate): -1 | 0 | 1 {
 
 export class Race {
   readonly lapTimesMs: number[] = []
+  readonly totalLaps: number
   bestLapMs: number | null
   checkpoint = 0
   elapsedMs = 0
   finishTimeMs: number | null = null
   private lapStartMs = 0
 
-  constructor(readonly gates: readonly Gate[], bestLapMs: number | null) {
+  constructor(readonly gates: readonly Gate[], bestLapMs: number | null, totalLaps = TOTAL_LAPS) {
     this.bestLapMs = bestLapMs
+    this.totalLaps = Number.isFinite(totalLaps) ? clamp(Math.trunc(totalLaps), 1, MAX_LAPS) : TOTAL_LAPS
   }
 
-  get lap() { return Math.min(this.lapTimesMs.length + 1, TOTAL_LAPS) }
-  get finished() { return this.lapTimesMs.length === TOTAL_LAPS }
+  get lap() { return Math.min(this.lapTimesMs.length + 1, this.totalLaps) }
+  get finished() { return this.lapTimesMs.length === this.totalLaps }
   get lapElapsedMs() {
-    return this.finished ? this.lapTimesMs[TOTAL_LAPS - 1] : Math.round(this.elapsedMs - this.lapStartMs)
+    return this.finished ? this.lapTimesMs[this.totalLaps - 1] : Math.round(this.elapsedMs - this.lapStartMs)
   }
 
   step(from: Point, to: Point, dtMs: number) {

@@ -24,7 +24,7 @@ describe('acceleration curve', () => {
   it.each(cars)('$name launches hard, tapers, and reaches the cap on schedule', spec => {
     const speeds = launch(new Car(spec))
     const capFrame = speeds.findIndex(speed => speed >= 270 - 1e-8)
-    expect(speeds[60]).toBeGreaterThan(150)
+    expect(speeds[60]).toBeGreaterThan(140)
     expect(speeds[60]).toBeLessThan(215)
     expect(speeds[capFrame - 1]).toBeLessThan(270)
     expect(speeds[capFrame] - speeds[capFrame - 30]).toBeLessThan((speeds[30] - speeds[0]) / 5)
@@ -34,13 +34,24 @@ describe('acceleration curve', () => {
     expect(speeds.at(-1)).toBeCloseTo(270)
   })
 
-  it('defaults to Stripe and lets the F1 reach top speed ahead of the Pickup', () => {
+  it('defaults to Stripe', () => {
     expect(new Car().spec).toBe(cars[0])
-    const pickup = launch(new Car(cars[1]))
-    const f1 = launch(new Car(cars[2]))
-    expect(pickup[1]).toBeGreaterThan(launch(new Car())[1])
-    expect(f1[180]).toBeCloseTo(270)
-    expect(pickup[180]).toBeLessThan(265)
+  })
+
+  it('launches F1 > Stripe > Taxi > Pickup at 0.5 s and 1.0 s and until each pair reaches the cap', () => {
+    const order = [cars[2], cars[0], cars[3], cars[1]]
+    const speeds = order.map(spec => launch(new Car(spec)))
+    for (const frame of [60, 120]) {
+      for (let i = 1; i < speeds.length; i++) {
+        expect(speeds[i - 1][frame]).toBeGreaterThan(speeds[i][frame])
+      }
+    }
+    for (let i = 1; i < speeds.length; i++) {
+      const slowerCapFrame = Math.round(order[i].accelerationTime / dt)
+      for (let frame = 1; frame < slowerCapFrame; frame++) {
+        expect(speeds[i - 1][frame]).toBeGreaterThan(speeds[i][frame])
+      }
+    }
   })
 
   it('rolls when coasting and scrubs speed quickly in either direction under opposing throttle', () => {

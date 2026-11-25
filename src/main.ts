@@ -4,8 +4,9 @@ import { Car } from './game/car'
 import type { Controls } from './game/car'
 import { cars } from './game/cars'
 import { resolveCarCollisions } from './game/collision'
-import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, TOTAL_LAPS, raceCountdown, raceProgress, rankRacers, readBestLap } from './game/race'
+import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, parseLapsParam, raceCountdown, raceProgress, rankRacers, readBestLap } from './game/race'
 import type { Countdown, RaceMode } from './game/race'
+import { Respawn } from './game/respawn'
 import { ROUTE_LENGTH, buildTrack, gates, gridSlot, progressWithinCheckpoint, projectRoute } from './game/track'
 import { loadAssets } from './render/assets'
 import { TireEffects } from './render/effects'
@@ -17,18 +18,20 @@ import { buildVersion } from './version'
 interface Racer {
   car: Car
   race: Race
+  respawn: Respawn
   effects: TireEffects
   distance: number
   progress: number
   controller?: RivalController
 }
 
-function snapshot({ car, race }: Racer) {
+function snapshot({ car, race, respawn }: Racer) {
   return Object.freeze({
     ...car.position, heading: car.heading, speed: car.speed, lap: race.lap,
     vx: car.velocity.x, vy: car.velocity.y, drifting: car.drifting,
     carId: car.spec.id, carName: car.spec.name, color: car.spec.color,
-    totalLaps: TOTAL_LAPS, checkpoint: race.checkpoint, finished: race.finished,
+    totalLaps: race.totalLaps, checkpoint: race.checkpoint, finished: race.finished,
+    respawning: car.respawnBlink > 0, respawns: respawn.count,
     collisions: car.collisions, lapTimesMs: Object.freeze([...race.lapTimesMs]),
     bestLapMs: race.bestLapMs, elapsedMs: race.elapsedMs, finishTimeMs: race.finishTimeMs,
   })
@@ -67,7 +70,9 @@ async function start() {
   const [assets, table] = await Promise.all([loadAssets(), loadTable()])
   const { props, solids } = buildTrack(assets)
   const scene = new Scene(element<HTMLCanvasElement>('race'), table, assets, props)
-  const hud = new Hud()
+  const params = new URLSearchParams(location.search)
+  const totalLaps = parseLapsParam(params.get('laps'))
+  const hud = new Hud(totalLaps)
   element('version').textContent = buildVersion
   let bestLap: number | null = null
   try { bestLap = readBestLap(localStorage) } catch { /* Storage can be disabled. */ }
@@ -80,7 +85,7 @@ async function start() {
   let ranks: Racer[]
   let active = false
   let countdownElapsed = 0
-  let overview = new URLSearchParams(location.search).get('overview') === '1'
+  let overview = params.get('overview') === '1'
 
   const overviewButton = element<HTMLButtonElement>('overview')
   const modeButtons = { race: element('mode-race'), 'time-trial': element('mode-time-trial') }
@@ -138,8 +143,9 @@ async function start() {
       car.position = position
       car.heading = heading
     }
+    const race = new Race(gates, controller ? null : bestLap, totalLaps)
     const racer = {
-      car, controller, race: new Race(gates, controller ? null : bestLap),
+      car, controller, race, respawn: new Respawn(car, race),
       effects: new TireEffects(), distance: 0, progress: 0,
     }
     updateProgress(racer)
@@ -150,6 +156,13 @@ async function start() {
     player.car.spec = cars[carIndex]
     const rivalSpecs = cars.filter((_, index) => index !== carIndex)
     racers.slice(1).forEach(({ car }, i) => { car.spec = rivalSpecs[i] })
+  }
+
+  function respawnRacer(racer: Racer) {
+    racer.respawn.toGate(racers.map(({ car }) => car))
+    racer.controller?.resetRecovery()
+    updateProgress(racer)
+    if (racer === player) scene.resetCamera(player.car)
   }
 
   function restart() {
@@ -185,6 +198,14 @@ async function start() {
 
   window.addEventListener('keydown', event => {
     if (event.ctrlKey || event.metaKey || event.altKey) return
+    if (event.code === 'KeyT' || event.code === 'Backspace') {
+      event.preventDefault()
+      if (!event.repeat && active && !player.race.finished) {
+        respawnRacer(player)
+        ranks = rankRacers(racers)
+      }
+      return
+    }
     if (!event.repeat) {
       const selected = /^Digit([1-4])$/.exec(event.code)
       if (selected) selectCar(Number(selected[1]) - 1)
@@ -215,6 +236,7 @@ async function start() {
 
   const pressed = (...codes: string[]) => Number(codes.some(code => keys.has(code)))
   function step(controls: Controls) {
+    for (const { car } of racers) car.respawnBlink = Math.max(0, car.respawnBlink - stepSeconds)
     if (mode === 'race') {
       countdownElapsed = Math.min(4 * COUNTDOWN_BEAT, countdownElapsed + stepSeconds)
       active = countdownElapsed >= 3 * COUNTDOWN_BEAT
@@ -237,7 +259,11 @@ async function start() {
     running.forEach((racer, i) => {
       const { car, race } = racer
       race.step(previous[i], car.position, stepSeconds * 1000)
-      updateProgress(racer)
+      if (!race.finished && racer.respawn.shouldRespawn(stepSeconds, Boolean(racer.controller) || controls.throttle !== 0)) {
+        respawnRacer(racer)
+      } else {
+        updateProgress(racer)
+      }
       if (race.finished) {
         car.velocity = { x: 0, y: 0 }
         car.drifting = false

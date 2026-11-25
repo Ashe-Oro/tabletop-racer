@@ -30,6 +30,10 @@ interface Vehicle {
   effects: TireEffects
 }
 
+function respawnAlpha(blink: number) {
+  return 1 - 0.75 * Math.min(1, blink * 4) * (0.5 + 0.5 * Math.cos(blink * 6 * Math.PI))
+}
+
 export function viewportScale(width: number, height: number) {
   return width >= 670 && height >= 420 ? 2 : 1
 }
@@ -130,18 +134,20 @@ export class Scene {
           this.turns.set(id, wrapped)
         }
       }
-      return { ...car.position, sprite, angle: car.heading, lift: car.bump }
+      return { ...car.position, sprite, angle: car.heading, lift: car.bump, alpha: respawnAlpha(car.respawnBlink) }
     })
     const drawSprite = (item: SceneryItem | typeof stacks[number], layer: 'shadow' | 'body') => {
       const x = left + item.x * scale
       const y = top + item.y * SQUASH * scale
       if (x < -160 * scale || x > width + 160 * scale || y < -125 * scale || y > height + 165 * scale) return
+      if ('alpha' in item) ctx.globalAlpha = item.alpha
       if (item.sprite instanceof FlatSprite) {
         const isAnt = 'prop' in item && (item.prop.asset === 'ant' || item.prop.asset === 'ant_walk')
         item.sprite.draw(ctx, x, y, scale * (isAnt ? ANT_SCALE : 1), layer, item.angle, this.sceneryTime + item.x / 19)
       } else {
         item.sprite.draw(ctx, x, y, scale, layer, 'lift' in item ? item.lift : 0)
       }
+      if ('alpha' in item) ctx.globalAlpha = 1
     }
     const bodies = [...this.scenery, ...stacks].sort((a, b) => a.y - b.y)
     for (const item of bodies) drawSprite(item, 'shadow')
@@ -152,7 +158,7 @@ export class Scene {
         x: left + car.position.x * scale,
         y: top + car.position.y * SQUASH * scale,
       }))
-      const markers = spreadMarkers(positions, 15)
+      const markers = spreadMarkers(positions, 22)
       ctx.beginPath()
       markers.forEach((marker, i) => {
         ctx.moveTo(positions[i].x, positions[i].y)
@@ -164,8 +170,10 @@ export class Scene {
       for (let i = racers.length - 1; i >= 0; i--) {
         const { car } = racers[i]
         const heading = Math.atan2(Math.sin(car.heading) * SQUASH, Math.cos(car.heading))
-        drawHeadingMarker(ctx, markers[i].x, markers[i].y, heading, car.spec.color, i === 0 ? 8 : 6)
+        ctx.globalAlpha = respawnAlpha(car.respawnBlink)
+        drawHeadingMarker(ctx, markers[i].x, markers[i].y, heading, car.spec.color, i === 0 ? 11 : 9, true)
       }
+      ctx.globalAlpha = 1
     }
   }
 }

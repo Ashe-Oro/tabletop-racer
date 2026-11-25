@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, gateCrossing, raceCountdown, raceProgress, rankRacers, readBestLap } from './race'
+import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, gateCrossing, parseLapsParam, raceCountdown, raceProgress, rankRacers, readBestLap } from './race'
 import type { Gate } from './race'
 import { gates as circuitGates, gridSlot, progressWithinCheckpoint, ROUTE_LENGTH, sampleRoute } from './track'
 
@@ -71,6 +71,40 @@ describe('race checkpoints', () => {
     expect(readBestLap({ getItem: key => key === BEST_LAP_KEY ? '18213' : null })).toBe(18213)
     for (const value of ['-1', 'NaN', '1.5', '', null]) {
       expect(readBestLap({ getItem: () => value })).toBeNull()
+    }
+  })
+})
+
+describe('lap count', () => {
+  it.each([1, 5])('finishes after exactly %i laps', totalLaps => {
+    const race = new Race(gates, null, totalLaps)
+    expect(race.totalLaps).toBe(totalLaps)
+    for (let lap = 1; lap <= totalLaps; lap++) {
+      expect(race.lap).toBe(lap)
+      expect(race.finished).toBe(false)
+      completeLap(race)
+    }
+    expect(race.finished).toBe(true)
+    expect(race.lap).toBe(totalLaps)
+    expect(race.lapElapsedMs).toBe(2000)
+    completeLap(race)
+    expect(race.lapTimesMs).toHaveLength(totalLaps)
+  })
+
+  it('defaults to three laps and clamps supplied counts', () => {
+    expect(new Race(gates, null).totalLaps).toBe(3)
+    expect(new Race(gates, null, 0).totalLaps).toBe(1)
+    expect(new Race(gates, null, 12).totalLaps).toBe(9)
+    expect(new Race(gates, null, 5.7).totalLaps).toBe(5)
+  })
+
+  it('accepts integer lap counts in range and defaults for invalid URL values', () => {
+    const parse = (search: string) => parseLapsParam(new URLSearchParams(search).get('laps'))
+    expect(parse('?laps=1')).toBe(1)
+    expect(parse('?laps=5&overview=1')).toBe(5)
+    expect(parse('?laps=9')).toBe(9)
+    for (const search of ['', '?laps=', '?laps=0', '?laps=-1', '?laps=10', '?laps=1.5', '?laps=2e0', '?laps=0x2', '?laps=two']) {
+      expect(parse(search)).toBe(3)
     }
   })
 })

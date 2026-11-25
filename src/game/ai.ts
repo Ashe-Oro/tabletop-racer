@@ -33,6 +33,12 @@ export class RivalController {
     this.lane = this.targetLane = this.style.lane
   }
 
+  resetRecovery() {
+    this.lastDistance = undefined
+    this.stalled = this.recovery = this.planTimer = 0
+    this.recoverySteer = 1
+  }
+
   controls(car: Car, distance: number, dt: number, solids: readonly Solid[], traffic: readonly Car[], gap = 0): Controls {
     const moved = this.lastDistance === undefined ? 0
       : distance - this.lastDistance - Math.round((distance - this.lastDistance) / ROUTE_LENGTH) * ROUTE_LENGTH

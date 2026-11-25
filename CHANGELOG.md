@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.1
+
+- Return cars to the last checkpoint after sustained time off track or a stall. Use T or Backspace to reset during a run. Cars briefly blink on return.
+- Set one to nine laps with `?laps=N` in Race and Time Trial. The HUD and lap splits follow the selected distance.
+- Fixed full-throttle launch order to F1, Stripe, Taxi, then Pickup, with each car reaching 270 px/s at its listed acceleration time.
+- Enlarged and spaced Overview markers and added a cream tick to show each car’s heading.
+
 ## 3.1.0 — AI Rivals
 
 - Added RC Pro-Am-style launches with a smooth taper to top speed, gentler coasting, and four car setups with distinct acceleration, weight, and handling. The garage shows each car’s stats, weight affects bumps, and a segmented tach shows speed building through the launch.

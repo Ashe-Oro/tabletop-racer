@@ -1,5 +1,5 @@
 export function drawHeadingMarker(ctx: CanvasRenderingContext2D, x: number, y: number, heading: number,
-  color: string, size: number) {
+  color: string, size: number, headingTick = false) {
   ctx.save()
   ctx.translate(Math.round(x), Math.round(y))
   ctx.rotate(heading)
@@ -15,6 +15,17 @@ export function drawHeadingMarker(ctx: CanvasRenderingContext2D, x: number, y: n
   ctx.stroke()
   ctx.fillStyle = color
   ctx.fill()
+  if (headingTick) {
+    ctx.beginPath()
+    ctx.moveTo(size - 4, 0)
+    ctx.lineTo(size + 4, 0)
+    ctx.lineCap = 'round'
+    ctx.lineWidth = 5
+    ctx.stroke()
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#f4f0e6'
+    ctx.stroke()
+  }
   ctx.restore()
 }
 

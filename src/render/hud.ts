@@ -44,7 +44,7 @@ export class Hud {
   private readonly gear = element('gear')
   private readonly tach = element('tach')
   private shownSegments = 0
-  private readonly splits = [element('split-1'), element('split-2'), element('split-3')]
+  private readonly splits: HTMLOutputElement[]
   private readonly gates = element('gates')
   private readonly finish = element('finish')
   private readonly finishTotal = element('finish-total')
@@ -58,7 +58,19 @@ export class Hud {
   private readonly mx = (x: number) => this.map.width / 2 + (x - TABLE_WIDTH / 2) * this.mapScale
   private readonly my = (y: number) => this.map.height / 2 + (y - TABLE_HEIGHT / 2) * this.mapScale
 
-  constructor() {
+  constructor(totalLaps: number) {
+    show(element('lap-total'), `/ 0${totalLaps}`)
+    const splits = element('lap-splits')
+    this.splits = Array.from({ length: totalLaps }, (_, i) => {
+      const row = document.createElement('li')
+      const label = document.createElement('span')
+      label.textContent = `Lap 0${i + 1}`
+      const time = document.createElement('output')
+      time.id = `split-${i + 1}`
+      row.append(label, time)
+      splits.append(row)
+      return time
+    })
     for (let i = 0; i < TACH_SEGMENTS; i++) this.tach.append(document.createElement('span'))
     for (const label of place) {
       const row = document.createElement('li')
