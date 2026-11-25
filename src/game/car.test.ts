@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import footprints from '../../public/assets/manifest.json'
+import { RivalController } from './ai'
 import { Car } from './car'
 import { cars } from './cars'
 import { overlaps } from './collision'
-import { buildTrack, TABLE_WIDTH } from './track'
+import { buildTrack, projectRoute, TABLE_WIDTH } from './track'
 
 const dt = 1 / 120
 const idle = { throttle: 0, steer: 0, handbrake: false }
@@ -258,6 +259,18 @@ describe('temporary car effects', () => {
     const speeds = launch(car)
     expect(speeds[222]).toBeCloseTo(216)
     expect(speeds.at(-1)).toBeCloseTo(216)
+  })
+
+  it('reaches the 135 px/s base cap under autopilot with rubber banding disabled', () => {
+    const car = new Car()
+    car.baseSpeedScale = 0.5
+    const autopilot = new RivalController(2, false)
+    for (let i = 0; i < 300; i++) {
+      car.step(dt, autopilot.controls(car, projectRoute(car.position), dt, [], [], 1000), [])
+      expect(car.speed).toBeLessThan(135.1)
+    }
+    expect(car.speedCap).toBe(135)
+    expect(car.speed).toBeCloseTo(135, 1)
   })
 
   it('spins, reduces traction, and returns steering control on expiry', () => {

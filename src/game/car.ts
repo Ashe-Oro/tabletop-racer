@@ -30,6 +30,7 @@ export class Car {
   drifting = false
   boostMultiplier = 1
   boostTimer = 0
+  baseSpeedScale = 1
   speedScale = 1
   spinTimer = 0
   respawnBlink = 0
@@ -41,7 +42,9 @@ export class Car {
   constructor(public spec: CarSpec = cars[0]) {}
 
   get speed() { return Math.hypot(this.velocity.x, this.velocity.y) }
-  get speedCap() { return TOP_SPEED * this.speedScale * (this.boostTimer > 0 ? this.boostMultiplier : 1) }
+  get speedCap() {
+    return TOP_SPEED * this.baseSpeedScale * this.speedScale * (this.boostTimer > 0 ? this.boostMultiplier : 1)
+  }
   get mass() { return this.spec.mass }
 
   respawn(position: Point, heading: number) {

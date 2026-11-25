@@ -11,6 +11,11 @@ export function parseLapsParam(value: string | null): number {
   return laps >= 1 && laps <= MAX_LAPS ? laps : TOTAL_LAPS
 }
 
+export function parseSpeedParam(value: string | null): number {
+  const scale = Number(value)
+  return Number.isFinite(scale) && scale > 0 ? clamp(scale, 0.25, 1) : 1
+}
+
 export interface Gate extends Point {
   forward: Point
   halfWidth: number

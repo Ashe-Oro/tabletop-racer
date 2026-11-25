@@ -58,7 +58,8 @@ export class Hud {
   private readonly mx = (x: number) => this.map.width / 2 + (x - TABLE_WIDTH / 2) * this.mapScale
   private readonly my = (y: number) => this.map.height / 2 + (y - TABLE_HEIGHT / 2) * this.mapScale
 
-  constructor(totalLaps: number) {
+  constructor(totalLaps: number, autopilot: boolean) {
+    element('autopilot').hidden = !autopilot
     show(element('lap-total'), `/ 0${totalLaps}`)
     const splits = element('lap-splits')
     this.splits = Array.from({ length: totalLaps }, (_, i) => {

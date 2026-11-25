@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, gateCrossing, parseLapsParam, raceCountdown, raceProgress, rankRacers, readBestLap } from './race'
+import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, gateCrossing, parseLapsParam, parseSpeedParam, raceCountdown, raceProgress, rankRacers, readBestLap } from './race'
 import type { Gate } from './race'
 import { gates as circuitGates, gridSlot, progressWithinCheckpoint, ROUTE_LENGTH, sampleRoute } from './track'
 
@@ -106,6 +106,16 @@ describe('lap count', () => {
     for (const search of ['', '?laps=', '?laps=0', '?laps=-1', '?laps=10', '?laps=1.5', '?laps=2e0', '?laps=0x2', '?laps=two']) {
       expect(parse(search)).toBe(3)
     }
+  })
+})
+
+describe('player speed parameter', () => {
+  it.each([null, '', 'slow', 'NaN', 'Infinity', '0', '-0.5'])('defaults to full speed for %s', value => {
+    expect(parseSpeedParam(value)).toBe(1)
+  })
+
+  it.each([['0.1', 0.25], ['0.25', 0.25], ['0.5', 0.5], ['1', 1], ['2', 1]])('parses %s as %s', (value, expected) => {
+    expect(parseSpeedParam(value)).toBe(expected)
   })
 })
 

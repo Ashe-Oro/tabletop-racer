@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.2
+
+- Drive the player car automatically in Race or Time Trial with `?autopilot=1` for QA. The HUD shows when autopilot is active.
+- Set a player-only top-speed multiplier from 0.25 to 1 with `?speed=0.5` or another numeric value. This works with manual driving and autopilot.
+
 ## 3.1.1
 
 - Return cars to the last checkpoint after sustained time off track or a stall. Use T or Backspace to reset during a run. Cars briefly blink on return.

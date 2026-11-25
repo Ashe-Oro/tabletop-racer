@@ -4,7 +4,7 @@ import { Car } from './game/car'
 import type { Controls } from './game/car'
 import { cars } from './game/cars'
 import { resolveCarCollisions } from './game/collision'
-import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, parseLapsParam, raceCountdown, raceProgress, rankRacers, readBestLap } from './game/race'
+import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, parseLapsParam, parseSpeedParam, raceCountdown, raceProgress, rankRacers, readBestLap } from './game/race'
 import type { Countdown, RaceMode } from './game/race'
 import { Respawn } from './game/respawn'
 import { ROUTE_LENGTH, buildTrack, gates, gridSlot, progressWithinCheckpoint, projectRoute } from './game/track'
@@ -41,6 +41,8 @@ interface RacerState extends ReturnType<typeof snapshot> {
   readonly scale: number
   readonly overview: boolean
   readonly mode: RaceMode
+  readonly autopilot: boolean
+  readonly playerSpeedScale: number
   readonly countdown: Countdown
   readonly position: number | null
   readonly rivals: readonly ReturnType<typeof snapshot>[]
@@ -72,7 +74,9 @@ async function start() {
   const scene = new Scene(element<HTMLCanvasElement>('race'), table, assets, props)
   const params = new URLSearchParams(location.search)
   const totalLaps = parseLapsParam(params.get('laps'))
-  const hud = new Hud(totalLaps)
+  const autopilot = params.get('autopilot') === '1'
+  const playerSpeedScale = parseSpeedParam(params.get('speed'))
+  const hud = new Hud(totalLaps, autopilot)
   element('version').textContent = buildVersion
   let bestLap: number | null = null
   try { bestLap = readBestLap(localStorage) } catch { /* Storage can be disabled. */ }
@@ -136,14 +140,15 @@ async function start() {
     racer.progress = progressWithinCheckpoint(racer.car.position, racer.race.checkpoint, racer.distance)
   }
 
-  function createRacer(slot: number, controller?: RivalController): Racer {
+  function createRacer(slot: number, isPlayer: boolean, controller?: RivalController): Racer {
     const car = new Car()
+    if (isPlayer) car.baseSpeedScale = playerSpeedScale
     if (mode === 'race') {
       const { heading, ...position } = gridSlot(slot)
       car.position = position
       car.heading = heading
     }
-    const race = new Race(gates, controller ? null : bestLap, totalLaps)
+    const race = new Race(gates, isPlayer ? bestLap : null, totalLaps)
     const racer = {
       car, controller, race, respawn: new Respawn(car, race),
       effects: new TireEffects(), distance: 0, progress: 0,
@@ -166,11 +171,11 @@ async function start() {
   }
 
   function restart() {
-    player = createRacer(2)
+    player = createRacer(2, true, autopilot ? new RivalController(2, false) : undefined)
     racers = [player]
     if (mode === 'race') {
       for (const [index, slot] of [0, 1, 3].entries()) {
-        racers.push(createRacer(slot, new RivalController(index)))
+        racers.push(createRacer(slot, false, new RivalController(index)))
       }
     }
     assignCars()
@@ -228,7 +233,8 @@ async function start() {
   Object.defineProperty(window, '__RACER_STATE__', {
     enumerable: true,
     get: (): RacerState => Object.freeze({
-      ...snapshot(player), scale: scene.scale, overview, mode, countdown: countdown(), position: position(),
+      ...snapshot(player), scale: scene.scale, overview, mode, autopilot, playerSpeedScale,
+      countdown: countdown(), position: position(),
       rivals: Object.freeze(racers.slice(1).map(snapshot)),
       standings: Object.freeze(mode === 'race' ? ranks.map(standing) : []),
     }),
@@ -241,7 +247,7 @@ async function start() {
       countdownElapsed = Math.min(4 * COUNTDOWN_BEAT, countdownElapsed + stepSeconds)
       active = countdownElapsed >= 3 * COUNTDOWN_BEAT
     } else {
-      active ||= controls.throttle !== 0
+      active ||= autopilot || controls.throttle !== 0
     }
     if (!active) return
 

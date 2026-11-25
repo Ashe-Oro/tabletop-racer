@@ -26,6 +26,21 @@ function drive(car: Car, controller: RivalController, race: Race, solids: readon
 }
 
 describe('rival driving', () => {
+  it('drives the player through a clean lap at half speed', () => {
+    const car = new Car()
+    const { heading, ...position } = gridSlot(2)
+    car.position = position
+    car.heading = heading
+    car.baseSpeedScale = 0.5
+    const race = new Race(gates, null, 1)
+    const { solids } = buildTrack(footprints)
+    const { reversed } = drive(car, new RivalController(2, false), race, solids, 70)
+    expect(race.finished).toBe(true)
+    expect(car.collisions).toBe(0)
+    expect(reversed).toBe(false)
+    expect(car.baseSpeedScale).toBe(0.5)
+  })
+
   it.each(cars.map((spec, index) => ({ spec, index })))('finishes three brisk laps at neutral pace with $spec.name', ({ spec, index }) => {
     const { heading, ...position } = gridSlot(index)
     const car = new Car(spec)
