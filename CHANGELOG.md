@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Corrected the car direction frames and added smooth rotation between them for both the car and its silhouette shadow. Tightened cornering grip, reduced chase camera lead, and suppressed low-speed steering jitter from rebounds.
+- Enlarged stationary and walking ants to 2× with nearest-neighbor rendering and matching silhouette shadows. Their placement bounds keep them clear of props, the lane, and each other.
+
 ## 3.0.2
 
 - Published the game at https://tabletop-racer.vercel.app from the public GitHub repo https://github.com/Ashe-Oro/tabletop-racer. Pushes to `main` deploy to production.

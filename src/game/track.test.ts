@@ -4,8 +4,8 @@ import { overlaps } from './collision'
 import type { Point } from './geometry'
 import { Race } from './race'
 import {
-  ANT_WALK_DISTANCE, ROUTE_LENGTH, TABLE_HEIGHT, TABLE_WIDTH, TRACK_CONFIG, TRACK_HALF_WIDTH,
-  buildTrack, gates, propIds, route, spawn,
+  ANT_SCALE, ANT_WALK_DISTANCE, ROUTE_LENGTH, TABLE_HEIGHT, TABLE_WIDTH, TRACK_CONFIG, TRACK_HALF_WIDTH,
+  antPlacementBounds, buildTrack, gates, propIds, route, spawn,
 } from './track'
 import type { PropId } from './track'
 
@@ -42,9 +42,20 @@ describe('picnic circuit', () => {
     }
     const ants = track.props.filter(({ asset }) => asset === 'ant' || asset === 'ant_walk')
     expect(ants.length).toBeGreaterThan(20)
-    for (const { asset, x, y } of ants) {
-      const radius = 5 + (asset === 'ant_walk' ? ANT_WALK_DISTANCE : 0)
-      expect(track.solids.some(solid => overlaps({ x, y, radius }, solid, 0))).toBe(false)
+    expect(ANT_SCALE).toBe(2)
+    const antBounds = ants.map(ant => antPlacementBounds(ant, footprints[ant.asset]))
+    for (const [i, bounds] of antBounds.entries()) {
+      const { x, y, angle, asset } = ants[i]
+      const halfWalk = asset === 'ant_walk' ? ANT_WALK_DISTANCE / 2 : 0
+      expect(bounds.x).toBeCloseTo(x + Math.cos(angle) * halfWalk)
+      expect(bounds.y).toBeCloseTo(y + Math.sin(angle) * halfWalk)
+      expect(bounds.radius).toBeCloseTo(Math.hypot(10, 6) + halfWalk)
+      expect(bounds.x - bounds.radius).toBeGreaterThanOrEqual(0)
+      expect(bounds.y - bounds.radius).toBeGreaterThanOrEqual(0)
+      expect(bounds.x + bounds.radius).toBeLessThanOrEqual(TABLE_WIDTH)
+      expect(bounds.y + bounds.radius).toBeLessThanOrEqual(TABLE_HEIGHT)
+      expect(track.solids.some(solid => overlaps(bounds, solid, 0))).toBe(false)
+      expect(antBounds.slice(0, i).some(other => overlaps(bounds, other, 0))).toBe(false)
     }
     expect(track.solids.some(solid => overlaps({ ...spawn, radius: TRACK_HALF_WIDTH }, solid, 0))).toBe(false)
 
@@ -57,6 +68,7 @@ describe('picnic circuit', () => {
           radius: TRACK_HALF_WIDTH,
         }
         expect(track.solids.some(solid => overlaps(lane, solid, 0))).toBe(false)
+        expect(antBounds.some(bounds => overlaps(lane, bounds, 0))).toBe(false)
       }
     }
   })
@@ -127,6 +139,10 @@ describe('picnic circuit', () => {
     for (const extra of extras) {
       expect(route.some(point => overlaps({ ...point, radius: 6 }, extra, 0))).toBe(true)
       expect(overlaps({ ...spawn, radius: TRACK_HALF_WIDTH }, extra, 0)).toBe(false)
+    }
+    for (const ant of normal.props.filter(({ asset }) => asset === 'ant' || asset === 'ant_walk')) {
+      const bounds = antPlacementBounds(ant, footprints[ant.asset])
+      expect(extras.some(extra => overlaps(bounds, extra, 0))).toBe(false)
     }
     expect(TRACK_CONFIG.OBSTACLES).toBe(false)
   })

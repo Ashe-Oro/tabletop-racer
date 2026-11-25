@@ -1,5 +1,5 @@
 import { overlaps } from './collision'
-import type { Solid } from './collision'
+import type { Circle, Solid } from './collision'
 import type { Footprint, Point } from './geometry'
 import type { Gate } from './race'
 
@@ -8,6 +8,7 @@ export const TABLE_HEIGHT = 3000
 export const TRACK_HALF_WIDTH = 108
 export const TRACK_CONFIG = { OBSTACLES: false as boolean }
 export const ANT_WALK_DISTANCE = 16
+export const ANT_SCALE = 2
 
 const corners: Point[] = [
   { x: 2100, y: 2500 }, { x: 2770, y: 2500 }, { x: 3450, y: 2420 },
@@ -71,6 +72,19 @@ export interface Prop extends Point {
 }
 
 type Placement = readonly [asset: PropId, x: number, y: number, angle: number]
+
+export function antPlacementBounds(prop: Prop, footprint: Footprint): Circle {
+  const { width, height, bounds: [left, top, right, bottom] } = visibleFootprint(footprint)
+  const halfWidth = Math.max(width / 2 - left, right - width / 2)
+  const halfHeight = Math.max(height / 2 - top, bottom - height / 2)
+  // Center the placement circle halfway along the walk to cover both endpoints.
+  const halfWalk = prop.asset === 'ant_walk' ? ANT_WALK_DISTANCE / 2 : 0
+  return {
+    x: prop.x + Math.cos(prop.angle) * halfWalk,
+    y: prop.y + Math.sin(prop.angle) * halfWalk,
+    radius: Math.hypot(halfWidth, halfHeight) * ANT_SCALE + halfWalk,
+  }
+}
 
 // Picnic setups, small leftovers and landmarks around the full table.
 const picnic: readonly Placement[] = [
@@ -196,15 +210,19 @@ export function buildTrack(footprints: Record<PropId, Footprint>, config = TRACK
 
   for (const [asset, x, y, angle] of picnic) add({ asset, x, y, angle }, true)
 
+  const antBounds: Circle[] = []
   for (const { asset, x, y } of [...props]) {
     if (asset !== 'watermelon' && asset !== 'crumb_pile') continue
     for (const [id, dx, dy, angle] of [
-      ['ant', -44, 28, 0.9], ['ant_walk', -59, 35, 1.1], ['ant_walk', -76, 38, 1.4],
+      ['ant', -44, 28, 0.9], ['ant_walk', -78, 35, 1.1], ['ant_walk', -119, 38, 1.4],
     ] as const) {
-      const ant = { x: x + dx, y: y + dy, radius: 5 + (id === 'ant_walk' ? ANT_WALK_DISTANCE : 0) }
-      if (insideTable(ant) && !solids.some(solid => overlaps(ant, solid, 0))
-          && !lane.some(sample => overlaps(ant, sample, 0))) {
-        props.push({ asset: id, x: ant.x, y: ant.y, angle })
+      const ant = { asset: id, x: x + dx, y: y + dy, angle }
+      const bounds = antPlacementBounds(ant, footprints[id])
+      if (insideTable(bounds) && !solids.some(solid => overlaps(bounds, solid, 0))
+          && !lane.some(sample => overlaps(bounds, sample, 0))
+          && !antBounds.some(other => overlaps(bounds, other, 0))) {
+        antBounds.push(bounds)
+        props.push(ant)
       }
     }
   }

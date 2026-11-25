@@ -6,6 +6,8 @@ import { spawn, TABLE_HEIGHT, TABLE_WIDTH } from './track'
 import { CAR_AXLE, CAR_RADIUS } from './cars'
 
 const TOP_SPEED = 270
+const STEERING_DEADBAND = 8
+const FULL_STEERING_SPEED = 60
 const WHEEL_CENTERS = [-CAR_AXLE, 0, CAR_AXLE]
 
 export interface Controls {
@@ -34,8 +36,11 @@ export class Car {
     const forward = { x: Math.cos(this.heading), y: Math.sin(this.heading) }
     const along = dot(this.velocity, forward)
     const speedRatio = clamp(Math.abs(along) / TOP_SPEED, 0, 1)
-    const steering = clamp(Math.abs(along) / 54, 0, 1) * (1 - 0.32 * speedRatio)
-    this.heading += controls.steer * steering * (controls.handbrake ? 4.8 : 3.9) * Math.sign(along) * dt
+    // Ignore low-speed sign changes from repeatedly rebounding off a contact.
+    const steerSpeed = along - clamp(along, -STEERING_DEADBAND, STEERING_DEADBAND)
+    const steering = clamp(steerSpeed / (FULL_STEERING_SPEED - STEERING_DEADBAND), -1, 1)
+      * (1 - 0.31 * speedRatio)
+    this.heading += controls.steer * steering * (controls.handbrake ? 4.8 : 3.6) * dt
 
     forward.x = Math.cos(this.heading)
     forward.y = Math.sin(this.heading)
@@ -48,7 +53,7 @@ export class Car {
     longitudinal *= Math.exp(-(controls.handbrake ? 1.6 : controls.throttle ? 0.9 : 2.35) * dt)
     longitudinal = clamp(longitudinal, -95, TOP_SPEED)
     const cornering = Math.abs(controls.steer) * speedRatio
-    const grip = controls.handbrake ? 1.8 : 12 - 6 * cornering
+    const grip = controls.handbrake ? 1.8 : 16 - 3 * cornering
     lateral *= Math.exp(-grip * dt)
     this.slip = lateral
     this.drifting = Math.abs(lateral) > 21 && Math.abs(longitudinal) > 38

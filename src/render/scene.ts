@@ -1,7 +1,7 @@
 import type { Car } from '../game/car'
 import { CAR_LENGTH, cars } from '../game/cars'
 import { clamp } from '../game/geometry'
-import { ANT_WALK_DISTANCE, TABLE_HEIGHT, TABLE_WIDTH, spawn } from '../game/track'
+import { ANT_SCALE, ANT_WALK_DISTANCE, TABLE_HEIGHT, TABLE_WIDTH, spawn } from '../game/track'
 import type { Prop } from '../game/track'
 import type { Assets, FlatAsset } from './assets'
 import { DirectionSprite } from './direction'
@@ -85,9 +85,8 @@ export class Scene {
       : viewportScale(width, height)
     const scale = this.scale
     const easing = 1 - Math.exp(-dt * 5.5)
-    const noseLead = Math.min(car.speed * 0.18, 42)
-    this.camera.x += (car.position.x + car.velocity.x * 0.28 + Math.cos(car.heading) * noseLead - this.camera.x) * easing
-    this.camera.y += (car.position.y + car.velocity.y * 0.28 + Math.sin(car.heading) * noseLead - this.camera.y) * easing
+    this.camera.x += (car.position.x + car.velocity.x * 0.12 - this.camera.x) * easing
+    this.camera.y += (car.position.y + car.velocity.y * 0.12 - this.camera.y) * easing
     const screenDepth = TABLE_HEIGHT * SQUASH
     const centerX = overview ? TABLE_WIDTH / 2 : clamp(this.camera.x,
       width / (2 * scale) - 80, TABLE_WIDTH - width / (2 * scale) + 80)
@@ -126,7 +125,8 @@ export class Scene {
       const y = top + item.y * SQUASH * scale
       if (x < -160 * scale || x > width + 160 * scale || y < -125 * scale || y > height + 165 * scale) return
       if (item.sprite instanceof FlatSprite) {
-        item.sprite.draw(ctx, x, y, scale, layer, item.angle, this.sceneryTime + item.x / 19)
+        const isAnt = 'prop' in item && (item.prop.asset === 'ant' || item.prop.asset === 'ant_walk')
+        item.sprite.draw(ctx, x, y, scale * (isAnt ? ANT_SCALE : 1), layer, item.angle, this.sceneryTime + item.x / 19)
       } else {
         item.sprite.draw(ctx, x, y, scale, layer, lift)
       }
