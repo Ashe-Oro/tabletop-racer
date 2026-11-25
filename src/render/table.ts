@@ -103,7 +103,7 @@ function routeMarks() {
 
 const groundKeys = ['wood', 'tablecloth', 'grass'] as const
 type GroundKey = typeof groundKeys[number]
-type Textures = Record<GroundKey, HTMLImageElement | HTMLCanvasElement>
+type Textures = Record<GroundKey, HTMLCanvasElement>
 
 async function loadTexture(url: string | undefined, fallback: () => HTMLCanvasElement) {
   if (!url) return fallback()
@@ -112,13 +112,22 @@ async function loadTexture(url: string | undefined, fallback: () => HTMLCanvasEl
   return image.decode().then(() => image, fallback)
 }
 
+function squashTile(source: HTMLImageElement | HTMLCanvasElement) {
+  const { width, height } = source
+  const tileHeight = Math.round(height * SQUASH)
+  const { canvas, ctx } = makeCanvas(width, tileHeight)
+  // Bake the nearest-neighbor squash once so pattern rows stay on the pixel grid at integer zoom.
+  ctx.drawImage(source, 0, 0, width, tileHeight)
+  return canvas
+}
+
 export async function loadTable() {
   const manifest = await loadManifest() as { ground?: Partial<Record<GroundKey, string>> }
   const fallback = { wood: woodTile, tablecloth: tableclothTile, grass: grassTile }
   const textures = Object.fromEntries(await Promise.all(groundKeys.map(async key => {
     const filename = manifest.ground?.[key]
     const url = filename ? groundUrl(filename) : undefined
-    return [key, await loadTexture(url, fallback[key])]
+    return [key, squashTile(await loadTexture(url, fallback[key]))]
   }))) as Textures
   return new Table(textures)
 }
@@ -126,11 +135,12 @@ export async function loadTable() {
 export class Table {
   private readonly marks = routeMarks()
   private patterns?: Record<GroundKey, CanvasPattern | null>
-  private readonly stitches = makeCanvas(12, 8).canvas
+  private readonly stitches: HTMLCanvasElement
   private stitchPattern?: CanvasPattern | null
 
   constructor(private readonly textures: Textures) {
-    const ctx = this.stitches.getContext('2d')!
+    const { canvas, ctx } = makeCanvas(12, 8)
+    this.stitches = canvas
     ctx.fillStyle = '#7b3b3190'
     ctx.fillRect(2, 5, 5, 1)
     ctx.fillStyle = '#fae3be'
@@ -138,18 +148,15 @@ export class Table {
   }
 
   draw(ctx: CanvasRenderingContext2D, left: number, top: number, scale: number, width: number, height: number) {
-    this.patterns ??= Object.fromEntries(groundKeys.map(key => {
-      const pattern = ctx.createPattern(this.textures[key], 'repeat')
-      pattern?.setTransform(new DOMMatrix().scaleSelf(1, SQUASH))
-      return [key, pattern]
-    })) as Record<GroundKey, CanvasPattern | null>
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    this.patterns ??= Object.fromEntries(groundKeys.map(key =>
+      [key, ctx.createPattern(this.textures[key], 'repeat')])) as Record<GroundKey, CanvasPattern | null>
     const patterns = this.patterns
     const panorama = scale < 1
     // Align the base and props to whole screen pixels at normal gameplay zoom.
     left = panorama ? left : Math.round(left)
     top = panorama ? top : Math.round(top)
-    ctx.save()
-    ctx.imageSmoothingEnabled = false
     ctx.translate(left, top)
     ctx.scale(scale, scale)
     ctx.fillStyle = patterns.grass ?? '#557849'

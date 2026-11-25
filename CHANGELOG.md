@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.1
+
+- Added 35% black silhouette shadows under props and cars. Direction-sheet shadows follow the active frame and stay on the ground as the car bounces.
+- Baked the vertical squash into the wood, tablecloth, and grass tiles with nearest-neighbor sampling so ground pixels stay crisp at 1× and 2× zoom.
+- Re-imported the F1 strip with the northeast frame inset one pixel from both sides.
+
 ## 3.0.0 — Artist v3 picnic art
 
 - Installed eight-direction Stripe, Pickup, F1, and Taxi sheets with the Artist's east and west redraws. The stack placeholder remains available if a car sheet fails to load.

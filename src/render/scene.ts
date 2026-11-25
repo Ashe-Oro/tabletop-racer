@@ -45,7 +45,7 @@ export class Scene {
     this.vehicles = cars.map(({ id }) => {
       const asset = assets[id]
       return asset.type === 'direction' ? new DirectionSprite(asset)
-        : new StackSprite(asset, false, CAR_LENGTH / asset.sliceHeight)
+        : new StackSprite(asset, CAR_LENGTH / asset.sliceHeight)
     })
     const flatSprites = new Map<FlatAsset, FlatSprite>()
     this.scenery = props.map(prop => {
@@ -58,7 +58,7 @@ export class Scene {
         }
         return { x: prop.x, y: prop.y, angle: prop.angle, prop, sprite }
       }
-      const sprite = new StackSprite(asset, asset.slices >= 36)
+      const sprite = new StackSprite(asset)
       sprite.bake(prop.angle)
       return { x: prop.x, y: prop.y, angle: prop.angle, prop, sprite }
     }).sort((a, b) => a.y - b.y)
@@ -111,7 +111,7 @@ export class Scene {
 
     const vehicle = this.vehicles[carIndex]
     if (vehicle instanceof DirectionSprite) {
-      vehicle.bake(car.heading)
+      vehicle.setHeading(car.heading)
     } else {
       const turn = Math.round(carTurn(car.heading) / TURN_STEP)
       const wrapped = ((turn % TURN_STEPS) + TURN_STEPS) % TURN_STEPS
