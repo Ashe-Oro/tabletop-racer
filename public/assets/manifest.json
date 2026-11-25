@@ -1,4 +1,16 @@
 {
+  "ant": {
+    "sliceHeight": 10,
+    "sliceWidth": 8,
+    "slices": 4,
+    "source": "art/placeholders/ant.png"
+  },
+  "basket": {
+    "sliceHeight": 136,
+    "sliceWidth": 192,
+    "slices": 56,
+    "source": "art/placeholders/basket.png"
+  },
   "butter_dish": {
     "sliceHeight": 37,
     "sliceWidth": 54,
@@ -10,6 +22,34 @@
     "sliceWidth": 43,
     "slices": 36,
     "source": "art/handoff/hero_car_a_slices.png"
+  },
+  "car_1": {
+    "sliceHeight": 71,
+    "sliceWidth": 43,
+    "slices": 36,
+    "source": "art/handoff/hero_car_a_slices.png",
+    "type": "stack"
+  },
+  "car_2": {
+    "sliceHeight": 71,
+    "sliceWidth": 43,
+    "slices": 36,
+    "source": "art/handoff/hero_car_a_slices.png",
+    "type": "stack"
+  },
+  "car_3": {
+    "sliceHeight": 71,
+    "sliceWidth": 43,
+    "slices": 36,
+    "source": "art/handoff/hero_car_a_slices.png",
+    "type": "stack"
+  },
+  "car_4": {
+    "sliceHeight": 71,
+    "sliceWidth": 43,
+    "slices": 36,
+    "source": "art/handoff/hero_car_a_slices.png",
+    "type": "stack"
   },
   "car_placeholder": {
     "sliceHeight": 36,
@@ -35,11 +75,29 @@
     "slices": 12,
     "source": "art/handoff/prop_crumb_pile_slices.png"
   },
+  "cup": {
+    "sliceHeight": 48,
+    "sliceWidth": 48,
+    "slices": 48,
+    "source": "art/placeholders/cup.png"
+  },
   "eraser": {
     "sliceHeight": 34,
     "sliceWidth": 19,
     "slices": 12,
     "source": "art/handoff/prop_eraser_slices.png"
+  },
+  "fork": {
+    "sliceHeight": 156,
+    "sliceWidth": 22,
+    "slices": 8,
+    "source": "art/placeholders/fork.png"
+  },
+  "ketchup": {
+    "sliceHeight": 84,
+    "sliceWidth": 38,
+    "slices": 28,
+    "source": "art/placeholders/ketchup.png"
   },
   "mug": {
     "sliceHeight": 60,
@@ -47,11 +105,23 @@
     "slices": 60,
     "source": "art/handoff/prop_mug_slices.png"
   },
+  "napkin": {
+    "sliceHeight": 96,
+    "sliceWidth": 96,
+    "slices": 6,
+    "source": "art/placeholders/napkin.png"
+  },
   "pencil": {
     "sliceHeight": 147,
     "sliceWidth": 18,
     "slices": 12,
     "source": "art/handoff/prop_pencil_slices.png"
+  },
+  "plate": {
+    "sliceHeight": 120,
+    "sliceWidth": 120,
+    "slices": 10,
+    "source": "art/placeholders/plate.png"
   },
   "ruler": {
     "sliceHeight": 169,
@@ -64,5 +134,11 @@
     "sliceWidth": 25,
     "slices": 44,
     "source": "art/handoff/prop_salt_shaker_slices.png"
+  },
+  "watermelon": {
+    "sliceHeight": 68,
+    "sliceWidth": 84,
+    "slices": 16,
+    "source": "art/placeholders/watermelon.png"
   }
 }

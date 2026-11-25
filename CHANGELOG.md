@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 2.0.0 — Picnic Circuit
+
+- Reduced Hero Car A's nominal footprint from 43 × 71 to 14.54 × 24 art px, with matching collision and tire effects. Retuned steering, speed, and handbrake grip.
+- Expanded the table to 4,400 × 3,000 art px with an 8,465.48 px loop. Added a checkered tablecloth, grass and blanket border, and eight picnic props alongside the nine Artist props.
+- Opened the table to free-roaming driving, with route cues, nine intermediate gates, a scaled minimap, a leading chase camera, and a full-table overview. The optional challenge configuration adds six in-lane obstacles.
+- Added four selectable car liveries and support for clockwise 8-, 16-, or 32-frame direction sheets. The Artist importer recognizes v3 car, picnic, and ground filenames.
+- Added the offline release and v2 screenshot, map overview, and gameplay clip. Verified a full keyboard-driven lap in Chromium from `file://`.
+
+## Before 2.0.0
 
 - `npm run build:single` generates `dist-single/tabletop-racer.html`, a self-contained game that opens directly in a browser.
 - Installed Artist v2 slice revisions: hex pencil with a flush ferrule, unbanded mug, 2-slice butter-dish seam, stable salt-cap holes, clean coin disks, and Hero Car A with a top-only stripe and softer shoulders. `TRACK_CONFIG.OBSTACLES` stays off by default.

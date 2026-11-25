@@ -110,7 +110,7 @@ h1 {
   position: relative;
   background: #241b19;
   border-top: 1px solid var(--rim);
-  height: clamp(330px, 64vh, 760px);
+  height: clamp(clamp(300px, 78vh, 481px), 66vh, 660px);
 }
 canvas { display: block; image-rendering: pixelated; }
 #race { width: 100%; height: 100%; }
@@ -118,6 +118,20 @@ canvas { display: block; image-rendering: pixelated; }
 .pit { display: flex; flex-direction: column; }
 .pit-section { padding: 15px; border-bottom: 1px solid var(--rim); }
 .pit h2 { margin: 0 0 12px; }
+.map-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.map-heading h2 { margin: 0; }
+#overview, #car-select button {
+  cursor: pointer;
+  background: #30241f;
+  color: var(--cream);
+  border: 1px solid var(--rim);
+}
+#overview { font-size: 10px; padding: 4px 5px; }
+#overview[aria-pressed="true"] { border-color: var(--teal); background: #315451; }
+#car-name { display: block; font-weight: bold; margin-bottom: 9px; }
+#car-select { display: grid; grid-template-columns: repeat(4, minmax(24px, 1fr)); gap: 5px; }
+#car-select button { padding: 3px 0; border-bottom: 3px solid var(--car-color); font-size: 12px; }
+#car-select button[aria-pressed="true"] { border-color: var(--car-color); color: var(--car-color); }
 #map { width: 100%; height: auto; background: var(--ink); border: 1px solid var(--rim); }
 .map-key { display: flex; justify-content: space-between; gap: 5px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .map-key i { display: inline-block; width: 7px; height: 7px; margin-right: 2px; background: var(--red); }
@@ -189,10 +203,14 @@ button:hover, button:focus-visible { color: var(--cream); }
   .layout { grid-template-columns: 1fr; }
   .pit { display: grid; grid-template-columns: 1fr 1fr; }
   .pit-section:first-child { border-right: 1px solid var(--rim); }
+  .splits { grid-column: 1 / -1; }
   .gate-status { grid-column: 1 / -1; }
   .masthead { margin-bottom: 12px; padding-bottom: 12px; }
-  .viewport { height: clamp(320px, 56vh, 540px); }
   .track-name { font-size: 9px; letter-spacing: .025em; gap: 5px; }
   .title-group { gap: 8px; }
   .flag-mark { width: 25px; height: 20px; background-size: 10px 10px; }
+}
+
+@media (max-width: 669px) {
+  .viewport { height: clamp(300px, 66vh, 660px); }
 }

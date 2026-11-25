@@ -2,7 +2,7 @@ import { delta, dot } from './geometry'
 import type { Point } from './geometry'
 
 export const TOTAL_LAPS = 3
-export const BEST_LAP_KEY = 'tabletop_racer_best_lap_ms'
+export const BEST_LAP_KEY = 'tabletop_racer_picnic_best_lap_ms'
 
 export interface Gate extends Point {
   forward: Point

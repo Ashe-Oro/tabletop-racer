@@ -1,6 +1,6 @@
 import type { Car } from '../game/car'
 import type { Race } from '../game/race'
-import { TABLE_HEIGHT, TABLE_WIDTH, route } from '../game/track'
+import { TABLE_HEIGHT, TABLE_WIDTH, gates, route } from '../game/track'
 import { makeCanvas } from './assets'
 
 export function element<T extends HTMLElement>(id: string): T {
@@ -35,29 +35,31 @@ export class Hud {
   private readonly map = element<HTMLCanvasElement>('map')
   private readonly mapContext = this.map.getContext('2d')!
   private readonly mapBase = makeCanvas(this.map.width, this.map.height)
-  private readonly mx = (x: number) => 10 + x * (this.map.width - 20) / TABLE_WIDTH
-  private readonly my = (y: number) => 8 + y * (this.map.height - 16) / TABLE_HEIGHT
+  private readonly mapScale = Math.min((this.map.width - 16) / TABLE_WIDTH, (this.map.height - 16) / TABLE_HEIGHT)
+  private readonly mx = (x: number) => this.map.width / 2 + (x - TABLE_WIDTH / 2) * this.mapScale
+  private readonly my = (y: number) => this.map.height / 2 + (y - TABLE_HEIGHT / 2) * this.mapScale
 
   constructor() {
     const { ctx, canvas } = this.mapBase
     ctx.fillStyle = '#1a1210'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = '#30241f'
-    for (let x = 7; x < canvas.width; x += 9) {
-      for (let y = 7; y < canvas.height; y += 9) ctx.fillRect(x, y, 1, 1)
-    }
+    ctx.fillRect(this.mx(0), this.my(0), TABLE_WIDTH * this.mapScale, TABLE_HEIGHT * this.mapScale)
     ctx.beginPath()
     ctx.moveTo(this.mx(route[0].x), this.my(route[0].y))
     for (const p of route) ctx.lineTo(this.mx(p.x), this.my(p.y))
     ctx.closePath()
     ctx.strokeStyle = '#315451'
-    ctx.lineWidth = 11
+    ctx.lineWidth = 5
     ctx.stroke()
     ctx.strokeStyle = '#c9c2b4'
     ctx.lineWidth = 2
     ctx.stroke()
+    const start = gates[0]
+    ctx.translate(this.mx(start.x), this.my(start.y))
+    ctx.rotate(Math.atan2(start.forward.y, start.forward.x))
     ctx.fillStyle = '#f4f0e6'
-    ctx.fillRect(Math.round(this.mx(route[0].x)) - 1, Math.round(this.my(route[0].y)) - 6, 3, 12)
+    ctx.fillRect(-1, -5, 2, 10)
   }
 
   draw(car: Car, race: Race) {

@@ -11,3 +11,7 @@ export function sliceUrl(id: string): string {
 }
 
 export const tableTileUrl = `${base}table_wood_tile.png`
+
+export function groundUrl(fileName: string): string {
+  return `${base}${fileName}`
+}

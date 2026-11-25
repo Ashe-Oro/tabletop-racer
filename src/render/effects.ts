@@ -33,13 +33,13 @@ export class TireEffects {
     }))
     this.cooldown -= dt
     if (this.cooldown > 0) return
-    this.cooldown = 0.028
+    this.cooldown = 0.025
     tires.forEach((tire, i) => {
       const previous = this.tires[i]
       if (previous) this.skids.push({ from: previous, to: tire, life: 8 })
       if (Math.random() < 0.66) this.puffs.push({
         ...tire, vx: car.velocity.x * 0.14 - s * car.slip * 0.4,
-        vy: car.velocity.y * 0.14 + c * car.slip * 0.4, life: 0.36,
+        vy: car.velocity.y * 0.14 + c * car.slip * 0.4, life: 0.3,
       })
     })
     this.tires = tires
@@ -50,7 +50,7 @@ export class TireEffects {
     const y = (value: number) => Math.round(top + value * scale * SQUASH)
     ctx.save()
     ctx.strokeStyle = '#502e2b'
-    ctx.lineWidth = 2 * scale
+    ctx.lineWidth = scale
     for (const skid of this.skids) {
       ctx.globalAlpha = Math.min(0.37, skid.life * 0.17)
       ctx.beginPath()
@@ -60,9 +60,9 @@ export class TireEffects {
     }
     ctx.fillStyle = '#f7cb97'
     for (const puff of this.puffs) {
-      ctx.globalAlpha = puff.life * 1.45
-      const size = Math.round(5 - puff.life * 7) * scale
-      const lift = (0.36 - puff.life) * scale * 13
+      ctx.globalAlpha = puff.life * 1.65
+      const size = Math.round(3 - puff.life * 4) * scale
+      const lift = (0.3 - puff.life) * scale * 8
       ctx.fillRect(x(puff.x), Math.round(y(puff.y) - lift), size, size)
     }
     ctx.restore()

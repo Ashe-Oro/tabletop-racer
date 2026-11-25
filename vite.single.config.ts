@@ -32,15 +32,22 @@ export default defineConfig({
           .filter(name => name.endsWith('.png'))
           .sort()
           .map(name => [name.slice(0, -4), pngDataUrl(`slices/${name}`)]))
+        const ground = Object.fromEntries(Object.values(manifest.ground ?? {})
+          .map(name => [name, pngDataUrl(name as string)]))
 
         return `
           const slices = ${JSON.stringify(slices)}
+          const ground = ${JSON.stringify(ground)}
           export async function loadManifest() { return ${JSON.stringify(manifest)} }
           export function sliceUrl(id) {
             if (!Object.hasOwn(slices, id)) throw new Error('Missing embedded sprite: ' + id)
             return slices[id]
           }
           export const tableTileUrl = ${JSON.stringify(pngDataUrl('table_wood_tile.png'))}
+          export function groundUrl(name) {
+            if (!Object.hasOwn(ground, name)) throw new Error('Missing embedded ground tile: ' + name)
+            return ground[name]
+          }
         `
       },
     },

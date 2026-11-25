@@ -1,19 +1,28 @@
 import './style.css'
 import { Car } from './game/car'
 import type { Controls } from './game/car'
+import { cars } from './game/cars'
+import type { CarId } from './game/cars'
 import { BEST_LAP_KEY, Race, TOTAL_LAPS, readBestLap } from './game/race'
 import { buildTrack, gates } from './game/track'
 import { loadAssets } from './render/assets'
 import { TireEffects } from './render/effects'
 import { Hud, element } from './render/hud'
 import { Scene } from './render/scene'
-import { bakeTable } from './render/table'
+import { loadTable } from './render/table'
 
 interface RacerState {
   readonly x: number
   readonly y: number
   readonly heading: number
   readonly speed: number
+  readonly vx: number
+  readonly vy: number
+  readonly drifting: boolean
+  readonly scale: number
+  readonly overview: boolean
+  readonly carId: CarId
+  readonly carName: string
   readonly lap: number
   readonly totalLaps: number
   readonly checkpoint: number
@@ -34,20 +43,50 @@ const drivingKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
 const stepSeconds = 1 / 120
 
 async function start() {
-  const [assets, table] = await Promise.all([loadAssets(), bakeTable()])
+  const [assets, table] = await Promise.all([loadAssets(), loadTable()])
   const { props, solids } = buildTrack(assets)
   const scene = new Scene(element<HTMLCanvasElement>('race'), table, assets, props)
   const hud = new Hud()
   let bestLap: number | null = null
   try { bestLap = readBestLap(localStorage) } catch { /* Storage can be disabled. */ }
   let race = new Race(gates, bestLap)
-  let car = new Car(assets.car)
+  let car = new Car()
   let effects = new TireEffects()
   let active = false
   const keys = new Set<string>()
+  let carIndex = 0
+  let overview = new URLSearchParams(location.search).get('overview') === '1'
+  const overviewButton = element<HTMLButtonElement>('overview')
+  const carName = element('car-name')
+  const carButtons = cars.map(({ name, color }, index) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = String(index + 1)
+    button.setAttribute('aria-label', name)
+    button.title = name
+    button.style.setProperty('--car-color', color)
+    button.addEventListener('click', () => selectCar(index))
+    element('car-select').append(button)
+    return button
+  })
+
+  function selectCar(index: number) {
+    carIndex = index
+    carName.textContent = cars[index].name
+    carButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(index === i)))
+  }
+
+  function setOverview(enabled: boolean) {
+    overview = enabled
+    overviewButton.setAttribute('aria-pressed', String(enabled))
+  }
+
+  selectCar(carIndex)
+  setOverview(overview)
+  overviewButton.addEventListener('click', () => setOverview(!overview))
 
   function restart() {
-    car = new Car(assets.car)
+    car = new Car()
     race = new Race(gates, bestLap)
     effects = new TireEffects()
     active = false
@@ -56,9 +95,15 @@ async function start() {
   }
 
   window.addEventListener('keydown', event => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return
+    if (!event.repeat) {
+      const selected = /^Digit([1-4])$/.exec(event.code)
+      if (selected) selectCar(Number(selected[1]) - 1)
+      if (event.code === 'KeyC') selectCar((carIndex + 1) % cars.length)
+    }
     if (event.code === 'KeyR' && !event.repeat) restart()
-    if (!drivingKeys.has(event.code) || event.ctrlKey || event.metaKey || event.altKey) return
-    if (event.code === 'Space' && event.target instanceof HTMLButtonElement) return
+    if (!drivingKeys.has(event.code)) return
+    if (event.code === 'Space' && !active && event.target instanceof HTMLButtonElement) return
     event.preventDefault()
     keys.add(event.code)
   })
@@ -70,6 +115,8 @@ async function start() {
     enumerable: true,
     get: (): RacerState => Object.freeze({
       ...car.position, heading: car.heading, speed: car.speed, lap: race.lap,
+      vx: car.velocity.x, vy: car.velocity.y, drifting: car.drifting, scale: scene.scale, overview,
+      carId: cars[carIndex].id, carName: cars[carIndex].name,
       totalLaps: TOTAL_LAPS, checkpoint: race.checkpoint, finished: race.finished,
       collisions: car.collisions, lapTimesMs: Object.freeze([...race.lapTimesMs]),
       bestLapMs: race.bestLapMs,
@@ -105,7 +152,7 @@ async function start() {
       step(controls)
       accumulator -= stepSeconds
     }
-    scene.draw(car, effects, dt)
+    scene.draw(car, carIndex, effects, dt, overview)
     hud.draw(car, race)
     requestAnimationFrame(frame)
   }

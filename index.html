@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#1a1210">
+  <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAPklEQVR42mP88uEZAymABZmjpqQFZ9+6dw1T/Na9a0wMJAKSNbCg2UjQebR3EskaGJHjYXAE63CIB0ZSkzcAit4ggjTLkMEAAAAASUVORK5CYII=">
   <title>Tabletop Racer</title>
 </head>
 <body>
@@ -13,7 +14,7 @@
         <span class="flag-mark" aria-hidden="true"></span>
         <h1>Tabletop Racer</h1>
       </div>
-      <div class="track-name"><span class="status-light"></span> Kitchen Circuit</div>
+      <div class="track-name"><span class="status-light"></span> Picnic Circuit</div>
     </header>
     <div class="layout">
       <section class="play" aria-label="Race">
@@ -41,9 +42,17 @@
       </section>
       <aside class="pit" aria-label="Circuit and lap records">
         <section class="pit-section">
-          <h2>Circuit map</h2>
-          <canvas id="map" width="208" height="132" aria-label="Circuit map showing the car and next checkpoint"></canvas>
+          <div class="map-heading">
+            <h2>Circuit map</h2>
+            <button id="overview" type="button" aria-pressed="false">Overview</button>
+          </div>
+          <canvas id="map" width="208" height="144" aria-label="Circuit map showing the car and next checkpoint"></canvas>
           <div class="map-key"><span><i></i> Car</span><span><i></i> Next gate</span></div>
+        </section>
+        <section class="pit-section garage">
+          <h2>Car</h2>
+          <output id="car-name">Hero Red</output>
+          <div id="car-select" role="group" aria-label="Select car"></div>
         </section>
         <section class="pit-section splits">
           <h2>Lap splits</h2>
@@ -53,12 +62,13 @@
             <li><span>Lap 03</span><output id="split-3">—</output></li>
           </ol>
         </section>
-        <div class="gate-status"><span>Checkpoints</span><output id="gates">0 / 8</output></div>
+        <div class="gate-status"><span>Checkpoints</span><output id="gates">—</output></div>
       </aside>
     </div>
     <footer class="controls" aria-label="Keyboard controls">
       <div><kbd>W A S D</kbd><span class="or">/</span><kbd>↑ ← ↓ →</kbd> Drive</div>
       <div><kbd>Space</kbd><span class="or">/</span><kbd>Shift</kbd> Drift</div>
+      <div><kbd>1–4</kbd><span class="or">/</span><kbd>C</kbd> Select car</div>
       <button id="restart" type="button"><kbd>R</kbd> Restart</button>
     </footer>
   </main>

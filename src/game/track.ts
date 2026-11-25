@@ -3,17 +3,18 @@ import type { Solid } from './collision'
 import type { Footprint, Point } from './geometry'
 import type { Gate } from './race'
 
-export const TABLE_WIDTH = 1400
-export const TABLE_HEIGHT = 950
-export const TRACK_HALF_WIDTH = 83
+export const TABLE_WIDTH = 4400
+export const TABLE_HEIGHT = 3000
+export const TRACK_HALF_WIDTH = 108
 export const TRACK_CONFIG = { OBSTACLES: false as boolean }
 
 const corners: Point[] = [
-  { x: 701, y: 752 }, { x: 1033, y: 747 }, { x: 1190, y: 656 },
-  { x: 1211, y: 438 }, { x: 1102, y: 238 }, { x: 921, y: 201 },
-  { x: 795, y: 310 }, { x: 656, y: 318 }, { x: 526, y: 201 },
-  { x: 326, y: 203 }, { x: 186, y: 349 }, { x: 177, y: 566 },
-  { x: 278, y: 718 }, { x: 455, y: 750 },
+  { x: 2100, y: 2500 }, { x: 2770, y: 2500 }, { x: 3450, y: 2420 },
+  { x: 3770, y: 2140 }, { x: 3830, y: 1700 }, { x: 3670, y: 1280 },
+  { x: 3320, y: 1100 }, { x: 2700, y: 1110 }, { x: 2280, y: 720 },
+  { x: 1670, y: 620 }, { x: 1090, y: 740 }, { x: 720, y: 1020 },
+  { x: 650, y: 1530 }, { x: 830, y: 1980 }, { x: 1240, y: 2390 },
+  { x: 1670, y: 2480 },
 ]
 
 function spline(i: number, t: number): Point {
@@ -36,16 +37,18 @@ export const route = raw.map((p, i) => {
   return { ...p, forward }
 })
 
-const longestSegment = Math.max(...route.map((p, i) => {
+const segments = route.map((p, i) => {
   const next = route[(i + 1) % route.length]
   return Math.hypot(next.x - p.x, next.y - p.y)
-}))
-// Pad the sample circles so they cover the full lane between route points.
-const laneRadius = Math.hypot(TRACK_HALF_WIDTH, longestSegment / 2)
+})
+export const ROUTE_LENGTH = segments.reduce((total, length) => total + length, 0)
+
+// Pad the circles so they cover the full lane between samples.
+const laneRadius = Math.hypot(TRACK_HALF_WIDTH, Math.max(...segments) / 2)
 const lane = route.map(({ x, y }) => ({ x, y, radius: laneRadius }))
 
-export const gates: Gate[] = [0, 2, 3, 5, 7, 8, 10, 11, 12].map(corner => ({
-  ...route[corner * SUBDIVISIONS], halfWidth: TRACK_HALF_WIDTH + 3,
+export const gates: Gate[] = [0, 2, 4, 6, 7, 8, 10, 11, 13, 14].map(corner => ({
+  ...route[corner * SUBDIVISIONS], halfWidth: 244,
 }))
 
 export const spawn = {
@@ -54,101 +57,124 @@ export const spawn = {
   heading: Math.atan2(gates[0].forward.y, gates[0].forward.x),
 }
 
-export type PropId = 'ruler' | 'pencil' | 'coin' | 'mug' | 'cereal_box'
-  | 'eraser' | 'salt_shaker' | 'butter_dish' | 'crumb_pile'
+export const propIds = [
+  'ruler', 'pencil', 'coin', 'mug', 'cereal_box', 'eraser', 'salt_shaker', 'butter_dish', 'crumb_pile',
+  'plate', 'cup', 'basket', 'watermelon', 'ketchup', 'napkin', 'fork', 'ant',
+] as const
+export type PropId = typeof propIds[number]
+
 export interface Prop extends Point {
   asset: PropId
   angle: number
-  solid: Solid
 }
 
-function boxSolid(position: Point & { angle: number }, footprint: Footprint): Solid {
-  return { ...position, halfWidth: footprint.sliceWidth / 2, halfLength: footprint.sliceHeight / 2 }
+type Placement = readonly [asset: PropId, x: number, y: number, angle: number]
+
+// Picnic setups, small leftovers and landmarks around the full table.
+const picnic: readonly Placement[] = [
+  ['basket', 2175, 2265, 0.22], ['plate', 2320, 2320, 0], ['watermelon', 2430, 2332, -0.51],
+  ['cup', 2187, 2670, 0], ['napkin', 2328, 2680, 0.21], ['fork', 2420, 2672, -0.36],
+  ['crumb_pile', 2500, 2642, 0], ['cup', 2640, 2330, 0], ['ketchup', 2760, 2285, 1.24],
+  ['plate', 2950, 2255, 0], ['watermelon', 3080, 2293, 0.32], ['fork', 3020, 2690, 1.24],
+  ['napkin', 3290, 2665, -0.51], ['cup', 3400, 2680, 0], ['basket', 3610, 2695, -0.45],
+  ['plate', 4025, 2390, 0], ['napkin', 4160, 2330, 0.62], ['fork', 4200, 2435, 0.38],
+  ['cup', 4062, 2065, 0], ['ketchup', 4020, 1735, 0.19], ['crumb_pile', 4008, 1840, -0.48],
+  ['plate', 3540, 1860, 0], ['watermelon', 3445, 1815, -1.02], ['salt_shaker', 3640, 1898, 0],
+  ['basket', 4130, 1360, 0.32], ['cup', 3990, 1245, 0], ['napkin', 4050, 1040, -0.51],
+  ['cereal_box', 3510, 1450, -0.36], ['mug', 3440, 1520, 3.2], ['butter_dish', 3445, 1390, -0.61],
+  ['plate', 3490, 848, 0], ['fork', 3620, 878, -0.96], ['napkin', 3780, 840, 0.26],
+  ['watermelon', 3130, 915, 0.48], ['crumb_pile', 3215, 890, -0.48], ['cup', 3065, 829, 0],
+  ['mug', 2920, 1280, 0.64], ['crumb_pile', 2810, 1305, 0], ['salt_shaker', 3060, 1370, 0],
+  ['basket', 2750, 740, -0.25], ['plate', 2610, 600, 0], ['ketchup', 2515, 525, 0.74],
+  ['fork', 2570, 1280, 0.76], ['plate', 2380, 1185, 0], ['cup', 2290, 1268, 0],
+  ['crumb_pile', 2285, 900, -0.24], ['eraser', 2140, 821, 0.54], ['pencil', 1980, 415, -1.03],
+  ['mug', 1720, 379, 1.01], ['cereal_box', 1580, 330, -0.25], ['coin', 1650, 432, 0],
+  ['basket', 1230, 380, 0.43], ['cup', 1080, 485, 0], ['plate', 912, 462, 0],
+  ['napkin', 594, 540, -0.25], ['fork', 494, 579, 1.1], ['watermelon', 480, 825, 0.36],
+  ['ketchup', 343, 950, -0.62], ['cup', 424, 1123, 0], ['butter_dish', 926, 1018, 0.4],
+  ['ruler', 1070, 1045, 1.3], ['pencil', 1180, 1135, 0.7], ['eraser', 1130, 1238, -0.6],
+  ['plate', 385, 1430, 0], ['crumb_pile', 412, 1540, 0], ['napkin', 343, 1646, -0.34],
+  ['cereal_box', 950, 1565, 0.64], ['mug', 1030, 1610, -1], ['coin', 1002, 1540, 0],
+  ['basket', 505, 1920, -0.12], ['cup', 459, 2075, 0], ['salt_shaker', 571, 2045, 0],
+  ['plate', 695, 2230, 0], ['napkin', 698, 2358, -0.82], ['fork', 602, 2244, -0.31],
+  ['pencil', 1160, 1980, -0.7], ['ruler', 1280, 2090, 1.12], ['coin', 1310, 2005, 0],
+  ['watermelon', 1395, 2690, -0.55], ['cup', 1510, 2650, 0], ['fork', 1618, 2720, 0.8],
+  ['butter_dish', 1660, 2270, 0.3], ['mug', 1770, 2255, 2.24], ['eraser', 1830, 2305, -0.48],
+  ['watermelon', 1630, 940, 0.22], ['plate', 1750, 1020, 0], ['fork', 1860, 1000, 1.02],
+  ['basket', 1420, 1600, -0.38], ['ketchup', 1590, 1530, 0.36], ['cup', 1470, 1730, 0],
+  ['napkin', 2035, 1540, -0.52], ['plate', 2155, 1540, 0], ['watermelon', 2130, 1650, -0.21],
+  ['salt_shaker', 2000, 1660, 0], ['crumb_pile', 2205, 1705, 0], ['pencil', 2425, 1720, -0.8],
+  ['basket', 2780, 1790, 0.34], ['cup', 2920, 1700, 0], ['napkin', 2830, 1945, -0.42],
+  ['ruler', 2000, 1980, -1.13], ['eraser', 1940, 2040, -0.21], ['coin', 1900, 2005, 0],
+]
+
+function colliders(prop: Prop, footprint: Footprint): Solid[] {
+  const { x, y, angle, asset } = prop
+  const { sliceWidth: width, sliceHeight: length } = footprint
+  if (asset === 'ant') return []
+  if (asset === 'mug') {
+    const bowlWidth = Math.min(width, length)
+    const handleLength = Math.abs(width - length)
+    // The handoff mug handle extends toward local −X. The placeholder extends toward −Y.
+    const axis = width >= length ? angle : angle + Math.PI / 2
+    const along = (offset: number) => ({
+      x: x + Math.cos(axis) * offset,
+      y: y + Math.sin(axis) * offset,
+    })
+    const bowl = { ...along(handleLength / 2), radius: bowlWidth / 2 }
+    return handleLength === 0 ? [bowl] : [bowl, {
+      ...along((2 - bowlWidth) / 2), angle: axis,
+      halfWidth: (handleLength + 2) / 2, halfLength: bowlWidth * (width >= length ? 0.16 : 0.1),
+    }]
+  }
+  if (asset === 'plate' || asset === 'cup' || asset === 'coin' || asset === 'salt_shaker') {
+    return [{ x, y, radius: Math.max(width, length) / 2 }]
+  }
+  return [{ x, y, angle, halfWidth: width / 2, halfLength: length / 2 }]
 }
 
-function fitsOutline(solid: Solid, solids: Solid[]) {
+function insideTable(solid: Solid) {
   const { x, y } = solid
   const extentX = 'radius' in solid ? solid.radius
     : Math.abs(Math.cos(solid.angle)) * solid.halfWidth + Math.abs(Math.sin(solid.angle)) * solid.halfLength
   const extentY = 'radius' in solid ? solid.radius
     : Math.abs(Math.sin(solid.angle)) * solid.halfWidth + Math.abs(Math.cos(solid.angle)) * solid.halfLength
   return x - extentX >= 0 && x + extentX <= TABLE_WIDTH && y - extentY >= 0 && y + extentY <= TABLE_HEIGHT
-    && !lane.some(sample => overlaps(sample, solid, 0))
-    && !solids.some(other => overlaps(solid, other, 4))
-}
-
-function addBoundary(side: number, footprints: Record<PropId, Footprint>, props: Prop[], solids: Solid[]) {
-  let distance = side > 0 ? 12 : 64
-  for (let i = 0; i < route.length; i++) {
-    const p = route[i]
-    const prev = route[(i + route.length - 1) % route.length]
-    distance += Math.hypot(p.x - prev.x, p.y - prev.y)
-    const bend = Math.floor(i / SUBDIVISIONS)
-    const curved = [1, 3, 4, 5, 7, 8, 9, 11, 12].includes(bend)
-    const asset = curved ? 'coin' : bend % 2 === 0 ? 'ruler' : 'pencil'
-    const footprint = footprints[asset]
-    const { sliceWidth, sliceHeight } = footprint
-    if (distance < (curved ? 49 : sliceHeight * 0.85)) continue
-    const angle = Math.atan2(p.forward.y, p.forward.x) - Math.PI / 2
-    const radius = Math.max(sliceWidth, sliceHeight) / 2
-    const clearance = asset === 'coin' ? radius + 2 : sliceWidth / 2 + 7
-    for (const extra of asset === 'coin' ? [0] : [0, 8, 16, 24]) {
-      const offset = side * (TRACK_HALF_WIDTH + clearance + extra)
-      const x = p.x - p.forward.y * offset
-      const y = p.y + p.forward.x * offset
-      const solid = asset === 'coin' ? { x, y, radius } : boxSolid({ x, y, angle }, footprint)
-      if (!fitsOutline(solid, solids)) continue
-      props.push({ x, y, angle, asset, solid })
-      solids.push(solid)
-      distance = 0
-      break
-    }
-  }
-}
-
-const mug = { x: 1145, y: 348, angle: 3.93 }
-const obstacles = [
-  { asset: 'cereal_box', x: 728, y: 280, angle: -0.33 },
-  { asset: 'eraser', x: 477, y: 632, angle: 0.42 },
-  { asset: 'salt_shaker', x: 957, y: 606, angle: 0 },
-  { asset: 'butter_dish', x: 508, y: 428, angle: -0.24 },
-  { asset: 'crumb_pile', x: 870, y: 410, angle: 0.71 },
-] as const
-
-function mugPoint(offset: number, axis: number): Point {
-  return {
-    x: mug.x + Math.cos(axis) * offset,
-    y: mug.y + Math.sin(axis) * offset,
-  }
 }
 
 export function buildTrack(footprints: Record<PropId, Footprint>, config = TRACK_CONFIG) {
   const props: Prop[] = []
   const solids: Solid[] = []
-  if (config.OBSTACLES) {
-    const { sliceWidth, sliceHeight } = footprints.mug
-    const bowlWidth = Math.min(sliceWidth, sliceHeight)
-    const handleLength = Math.abs(sliceWidth - sliceHeight)
-    // The handoff mug's handle extends toward local −X. The placeholder extends toward −Y.
-    const axis = sliceWidth >= sliceHeight ? mug.angle : mug.angle + Math.PI / 2
-    props.push({ ...mug, asset: 'mug', solid: { ...mugPoint(handleLength / 2, axis), radius: bowlWidth / 2 } })
-    for (const { asset, ...position } of obstacles) {
-      const footprint = footprints[asset]
-      const solid = asset === 'salt_shaker'
-        ? { ...position, radius: Math.max(footprint.sliceWidth, footprint.sliceHeight) / 2 }
-        : boxSolid(position, footprint)
-      props.push({ ...position, asset, solid })
-    }
-    solids.push(...props.map(prop => prop.solid))
-    if (handleLength > 0) {
-      const overlap = 2
-      solids.push({
-        ...mugPoint((-bowlWidth + overlap) / 2, axis), angle: axis,
-        halfWidth: (handleLength + overlap) / 2, halfLength: bowlWidth * (sliceWidth >= sliceHeight ? 0.16 : 0.1),
-      })
+  const add = (prop: Prop, keepLaneClear: boolean) => {
+    const shapes = colliders(prop, footprints[prop.asset])
+    if (!shapes.every(shape => insideTable(shape)
+        && !solids.some(other => overlaps(shape, other, 6))
+        && (!keepLaneClear || !lane.some(sample => overlaps(sample, shape, 0))))) return
+    props.push(prop)
+    solids.push(...shapes)
+  }
+
+  for (const [asset, x, y, angle] of picnic) add({ asset, x, y, angle }, true)
+
+  for (const { asset, x, y } of [...props]) {
+    if (asset !== 'watermelon' && asset !== 'crumb_pile') continue
+    for (const [dx, dy, angle] of [[-44, 28, 0.9], [-59, 35, 1.1], [-76, 38, 1.4]]) {
+      const ant = { x: x + dx, y: y + dy, radius: 5 }
+      if (!solids.some(solid => overlaps(ant, solid, 0)) && !lane.some(sample => overlaps(ant, sample, 0))) {
+        props.push({ asset: 'ant', x: ant.x, y: ant.y, angle })
+      }
     }
   }
-  addBoundary(1, footprints, props, solids)
-  addBoundary(-1, footprints, props, solids)
+
+  if (config.OBSTACLES) {
+    const challenges = [
+      ['cup', 1, 18], ['napkin', 3, 13], ['ketchup', 5, 17],
+      ['cereal_box', 8, 18], ['eraser', 11, 16], ['plate', 13, 16],
+    ] as const
+    for (const [asset, corner, offset] of challenges) {
+      const { x, y, forward } = route[corner * SUBDIVISIONS + offset]
+      add({ asset, x, y, angle: Math.atan2(forward.y, forward.x) + 0.7 }, false)
+    }
+  }
   return { props, solids }
 }

@@ -31,7 +31,8 @@ export class StackSprite {
   private readonly phaseX: number
   private readonly phaseY: number
 
-  constructor(private readonly asset: StackAsset, private readonly castShadow = false) {
+  constructor(private readonly asset: StackAsset, private readonly castShadow = false,
+    private readonly worldScale = 1) {
     const { sliceWidth: w, sliceHeight: h, slices } = asset
     // Centre the sample grid on either a pixel or a pixel boundary according
     // to the native footprint. Even sprites then turn around a stable pivot.
@@ -121,8 +122,9 @@ export class StackSprite {
 
   draw(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, layer: 'shadow' | 'body', lift = 0) {
     const sprite = layer === 'shadow' ? this.shadow : this.body
-    const left = Math.round(x - (this.pivotX + 0.5 - this.phaseX) * scale)
-    const top = Math.round(y - (this.pivotY + 0.5 - this.phaseY + lift) * scale)
-    ctx.drawImage(sprite, left, top, sprite.width * scale, sprite.height * scale)
+    const zoom = this.worldScale * scale
+    const left = Math.round(x - (this.pivotX + 0.5 - this.phaseX) * zoom)
+    const top = Math.round(y - (this.pivotY + 0.5 - this.phaseY) * zoom - lift * scale)
+    ctx.drawImage(sprite, left, top, sprite.width * zoom, sprite.height * zoom)
   }
 }

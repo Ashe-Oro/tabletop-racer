@@ -97,5 +97,77 @@
     "order": "reading",
     "colours": 32,
     "shade": 0.12
+  },
+  "plate": {
+    "slices": 10,
+    "round": true,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
+  },
+  "cup": {
+    "slices": 48,
+    "round": true,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
+  },
+  "basket": {
+    "slices": 56,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
+  },
+  "watermelon": {
+    "slices": 16,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
+  },
+  "ketchup": {
+    "slices": 28,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
+  },
+  "napkin": {
+    "slices": 6,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
+  },
+  "fork": {
+    "slices": 8,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
+  },
+  "ant": {
+    "slices": 4,
+    "round": false,
+    "top_nose": "down",
+    "side_nose": "left",
+    "order": "reading",
+    "colours": 0,
+    "shade": 0.12
   }
 }
