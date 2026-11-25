@@ -1,0 +1,38 @@
+{
+  "car": {
+    "sliceHeight": 36,
+    "sliceWidth": 20,
+    "slices": 16,
+    "source": "art/placeholders/car.png"
+  },
+  "cereal_box": {
+    "sliceHeight": 48,
+    "sliceWidth": 31,
+    "slices": 60,
+    "source": "art/placeholders/cereal_box.png"
+  },
+  "coin": {
+    "sliceHeight": 22,
+    "sliceWidth": 22,
+    "slices": 6,
+    "source": "art/placeholders/coin.png"
+  },
+  "mug": {
+    "sliceHeight": 69,
+    "sliceWidth": 44,
+    "slices": 36,
+    "source": "art/placeholders/mug.png"
+  },
+  "pencil": {
+    "sliceHeight": 83,
+    "sliceWidth": 12,
+    "slices": 12,
+    "source": "art/placeholders/pencil.png"
+  },
+  "ruler": {
+    "sliceHeight": 100,
+    "sliceWidth": 20,
+    "slices": 7,
+    "source": "art/placeholders/ruler.png"
+  }
+}
