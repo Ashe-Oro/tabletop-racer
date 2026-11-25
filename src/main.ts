@@ -18,17 +18,16 @@ interface Racer {
   car: Car
   race: Race
   effects: TireEffects
-  carIndex: number
   distance: number
   progress: number
   controller?: RivalController
 }
 
-function snapshot({ car, race, carIndex }: Racer) {
+function snapshot({ car, race }: Racer) {
   return Object.freeze({
     ...car.position, heading: car.heading, speed: car.speed, lap: race.lap,
     vx: car.velocity.x, vy: car.velocity.y, drifting: car.drifting,
-    carId: cars[carIndex].id, carName: cars[carIndex].name, color: cars[carIndex].color,
+    carId: car.spec.id, carName: car.spec.name, color: car.spec.color,
     totalLaps: TOTAL_LAPS, checkpoint: race.checkpoint, finished: race.finished,
     collisions: car.collisions, lapTimesMs: Object.freeze([...race.lapTimesMs]),
     bestLapMs: race.bestLapMs, elapsedMs: race.elapsedMs, finishTimeMs: race.finishTimeMs,
@@ -46,8 +45,9 @@ interface RacerState extends ReturnType<typeof snapshot> {
 }
 
 function standing(racer: Racer, index: number) {
+  const { id, name, color } = racer.car.spec
   return Object.freeze({
-    ...cars[racer.carIndex],
+    id, name, color,
     position: index + 1,
     finishTimeMs: racer.race.finishTimeMs,
   })
@@ -85,6 +85,9 @@ async function start() {
   const overviewButton = element<HTMLButtonElement>('overview')
   const modeButtons = { race: element('mode-race'), 'time-trial': element('mode-time-trial') }
   const carName = element('car-name')
+  const carAccel = element('car-accel')
+  const carWeight = element('car-weight')
+  const carHandling = element('car-handling')
   const carButtons = cars.map(({ name, color }, index) => {
     const button = document.createElement('button')
     button.type = 'button'
@@ -103,14 +106,18 @@ async function start() {
     updateGarage()
     if (mode === 'race') {
       if (active) restart()
-      else assignLiveries()
+      else assignCars()
     } else {
-      player.carIndex = carIndex
+      player.car.spec = cars[carIndex]
     }
   }
 
   function updateGarage() {
-    carName.textContent = cars[carIndex].name
+    const { name, accelerationTime, mass, handling } = cars[carIndex]
+    carName.textContent = name
+    carAccel.textContent = `${accelerationTime.toFixed(2)} s`
+    carWeight.textContent = `${mass.toFixed(2)}×`
+    carHandling.textContent = `${handling.toFixed(2)}×`
     carButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(carIndex === i)))
   }
 
@@ -133,16 +140,16 @@ async function start() {
     }
     const racer = {
       car, controller, race: new Race(gates, controller ? null : bestLap),
-      effects: new TireEffects(), carIndex, distance: 0, progress: 0,
+      effects: new TireEffects(), distance: 0, progress: 0,
     }
     updateProgress(racer)
     return racer
   }
 
-  function assignLiveries() {
-    player.carIndex = carIndex
-    const otherIndices = cars.map((_, index) => index).filter(index => index !== carIndex)
-    racers.slice(1).forEach((racer, i) => { racer.carIndex = otherIndices[i] })
+  function assignCars() {
+    player.car.spec = cars[carIndex]
+    const rivalSpecs = cars.filter((_, index) => index !== carIndex)
+    racers.slice(1).forEach(({ car }, i) => { car.spec = rivalSpecs[i] })
   }
 
   function restart() {
@@ -153,7 +160,7 @@ async function start() {
         racers.push(createRacer(slot, new RivalController(index)))
       }
     }
-    assignLiveries()
+    assignCars()
     ranks = rankRacers(racers)
     active = false
     countdownElapsed = 0

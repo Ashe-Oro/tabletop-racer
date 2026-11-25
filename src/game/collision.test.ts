@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Car } from './car'
+import { cars } from './cars'
 import { boxContact, circleContact, overlaps, resolveCarCollisions, resolveContact, tableContacts } from './collision'
 
 describe('arcade contacts', () => {
@@ -105,6 +106,19 @@ describe('car-to-car contacts', () => {
     expect(a.velocity.y).toBeLessThan(b.velocity.y)
     expect(a.collisions).toBe(1)
     expect(b.collisions).toBe(1)
+  })
+
+  it('pushes the light F1 farther and transfers more speed to it on impact with the Pickup', () => {
+    const [pickup, f1] = headOn(23)
+    pickup.spec = cars[1]
+    f1.spec = cars[2]
+    pickup.velocity.x = 200
+    const massRatio = pickup.mass / f1.mass
+    resolveCarCollisions([pickup, f1])
+    expect(f1.position.x).toBeGreaterThan(123)
+    expect((f1.position.x - 123) / (100 - pickup.position.x)).toBeCloseTo(massRatio)
+    expect(f1.velocity.x / (200 - pickup.velocity.x)).toBeCloseTo(massRatio)
+    expect(pickup.mass * pickup.velocity.x + f1.mass * f1.velocity.x).toBeCloseTo(pickup.mass * 200)
   })
 
   it('cannot tunnel head-on at 270 px/s in the 120 Hz physics loop', () => {

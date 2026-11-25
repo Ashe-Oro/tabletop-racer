@@ -102,8 +102,12 @@ export function overlaps(a: Solid, b: Solid, gap: number): boolean {
   )
 }
 
-/** Solve equal-mass contacts between the three circles along each chassis. */
-export function resolveCarCollisions(cars: readonly Car[]) {
+type Chassis = Pick<Car, 'heading' | 'position' | 'velocity' | 'radius' | 'axle' | 'registerImpact'>
+  & Partial<Pick<Car, 'mass'>>
+
+/** Solve contacts between the three circles along each chassis. */
+export function resolveCarCollisions(cars: readonly Chassis[]) {
+  const inverseMasses = cars.map(car => 1 / (car.mass ?? 1))
   const bodies = cars.map(car => {
     const x = Math.cos(car.heading)
     const y = Math.sin(car.heading)
@@ -138,21 +142,23 @@ export function resolveCarCollisions(cars: readonly Car[]) {
         if (!contact) continue
         separated = true
         const { normal, depth } = contact
-        const push = (depth + 0.03) / 2
-        a.position.x += normal.x * push
-        a.position.y += normal.y * push
-        b.position.x -= normal.x * push
-        b.position.y -= normal.y * push
+        const shareA = inverseMasses[i] / (inverseMasses[i] + inverseMasses[j])
+        const shareB = 1 - shareA
+        const push = depth + 0.03
+        a.position.x += normal.x * push * shareA
+        a.position.y += normal.y * push * shareA
+        b.position.x -= normal.x * push * shareB
+        b.position.y -= normal.y * push * shareB
 
         const incoming = dot({ x: a.velocity.x - b.velocity.x, y: a.velocity.y - b.velocity.y }, normal)
         if (incoming >= 0) continue
-        const impulse = -(1 + 0.48) * incoming / 2
-        a.velocity.x += normal.x * impulse
-        a.velocity.y += normal.y * impulse
-        b.velocity.x -= normal.x * impulse
-        b.velocity.y -= normal.y * impulse
-        a.registerImpact(-incoming / 2)
-        b.registerImpact(-incoming / 2)
+        const impulse = -(1 + 0.48) * incoming
+        a.velocity.x += normal.x * impulse * shareA
+        a.velocity.y += normal.y * impulse * shareA
+        b.velocity.x -= normal.x * impulse * shareB
+        b.velocity.y -= normal.y * impulse * shareB
+        a.registerImpact(-incoming * shareA)
+        b.registerImpact(-incoming * shareB)
       }
     }
     if (!separated) break

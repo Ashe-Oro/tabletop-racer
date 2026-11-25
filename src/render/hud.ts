@@ -1,5 +1,5 @@
 import type { Car } from '../game/car'
-import { cars } from '../game/cars'
+import { clamp } from '../game/geometry'
 import type { Countdown, Race } from '../game/race'
 import { TABLE_HEIGHT, TABLE_WIDTH, gates, route } from '../game/track'
 import { makeCanvas } from './assets'
@@ -9,10 +9,10 @@ import { drawHeadingMarker, spreadMarkers } from './marker'
 interface HudRacer {
   car: Car
   race: Race
-  carIndex: number
 }
 
 const place = ['1st', '2nd', '3rd', '4th']
+const TACH_SEGMENTS = 10
 
 export function element<T extends HTMLElement>(id: string): T {
   const item = document.getElementById(id)
@@ -42,6 +42,8 @@ export class Hud {
   private readonly best = element('best')
   private readonly speed = element('speed')
   private readonly gear = element('gear')
+  private readonly tach = element('tach')
+  private shownSegments = 0
   private readonly splits = [element('split-1'), element('split-2'), element('split-3')]
   private readonly gates = element('gates')
   private readonly finish = element('finish')
@@ -57,6 +59,7 @@ export class Hud {
   private readonly my = (y: number) => this.map.height / 2 + (y - TABLE_HEIGHT / 2) * this.mapScale
 
   constructor() {
+    for (let i = 0; i < TACH_SEGMENTS; i++) this.tach.append(document.createElement('span'))
     for (const label of place) {
       const row = document.createElement('li')
       const position = document.createElement('strong')
@@ -91,7 +94,7 @@ export class Hud {
   }
 
   draw(racers: readonly HudRacer[], ranks: readonly HudRacer[], countdown: Countdown, position: number | null) {
-    const { car, race, carIndex } = racers[0]
+    const { car, race } = racers[0]
     show(this.position, position === null ? '—' : place[position - 1])
     this.position.classList.toggle('leading', position === 1)
     if (countdown !== this.shownCountdown) {
@@ -109,6 +112,12 @@ export class Hud {
     const reversing = car.velocity.x * Math.cos(car.heading) + car.velocity.y * Math.sin(car.heading) < -5
     show(this.gear, car.drifting ? 'DRIFT' : reversing ? 'REV' : 'FWD')
     this.gear.classList.toggle('drifting', car.drifting)
+    const segments = Math.round(clamp(car.speed / car.speedCap, 0, 1) * TACH_SEGMENTS)
+    if (segments !== this.shownSegments) {
+      this.shownSegments = segments
+      this.tach.setAttribute('aria-valuenow', String(100 * segments / TACH_SEGMENTS))
+      for (let i = 0; i < TACH_SEGMENTS; i++) this.tach.children[i].classList.toggle('lit', i < segments)
+    }
     this.splits.forEach((item, i) => show(item, formatTime(race.lapTimesMs[i])))
     show(this.gates, `${race.checkpoint} / ${race.gates.length - 1}`)
 
@@ -118,7 +127,7 @@ export class Hud {
       show(this.finishBest, formatTime(race.bestLapMs))
       this.standings.hidden = position === null
       if (position !== null) ranks.forEach((racer, i) => {
-        const { name, color } = cars[racer.carIndex]
+        const { name, color } = racer.car.spec
         const row = this.standings.children[i]
         const [, swatch, label, time] = Array.from(row.children) as HTMLElement[]
         swatch.style.backgroundColor = color
@@ -143,10 +152,10 @@ export class Hud {
       const y = Math.round(markers[index + 1].y)
       ctx.fillStyle = '#1a1210'
       ctx.fillRect(x - 3, y - 3, 7, 7)
-      ctx.fillStyle = cars[rival.carIndex].color
+      ctx.fillStyle = rival.car.spec.color
       ctx.fillRect(x - 2, y - 2, 5, 5)
     })
-    const color = cars[carIndex].color
+    const color = car.spec.color
     this.mapKey.style.backgroundColor = color
     drawHeadingMarker(ctx, markers[0].x, markers[0].y, car.heading, color, 7)
   }

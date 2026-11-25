@@ -1,5 +1,6 @@
 import type { Car } from '../game/car'
 import { CAR_LENGTH, cars } from '../game/cars'
+import type { CarId } from '../game/cars'
 import { clamp } from '../game/geometry'
 import { ANT_SCALE, ANT_WALK_DISTANCE, TABLE_HEIGHT, TABLE_WIDTH, spawn } from '../game/track'
 import type { Prop } from '../game/track'
@@ -26,7 +27,6 @@ interface SceneryItem {
 
 interface Vehicle {
   car: Car
-  carIndex: number
   effects: TireEffects
 }
 
@@ -36,10 +36,10 @@ export function viewportScale(width: number, height: number) {
 
 export class Scene {
   private readonly ctx: CanvasRenderingContext2D
-  private readonly vehicles: (StackSprite | DirectionSprite)[]
+  private readonly vehicles = new Map<CarId, StackSprite | DirectionSprite>()
   private readonly scenery: SceneryItem[]
   private readonly walkingAnts: SceneryItem[]
-  private readonly turns: number[] = []
+  private readonly turns = new Map<CarId, number>()
   private camera = { x: spawn.x, y: spawn.y }
   private sceneryTime = 0
   scale = 1
@@ -49,11 +49,12 @@ export class Scene {
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas 2D is unavailable.')
     this.ctx = ctx
-    this.vehicles = cars.map(({ id }) => {
+    for (const { id } of cars) {
       const asset = assets[id]
-      return asset.type === 'direction' ? new DirectionSprite(asset)
+      const sprite = asset.type === 'direction' ? new DirectionSprite(asset)
         : new StackSprite(asset, CAR_LENGTH / asset.sliceHeight)
-    })
+      this.vehicles.set(id, sprite)
+    }
     const flatSprites = new Map<FlatAsset, FlatSprite>()
     this.scenery = props.map(prop => {
       const asset = assets[prop.asset]
@@ -116,16 +117,17 @@ export class Scene {
     }
 
     // Each active livery has its own sprite, heading cache, and shadow.
-    const stacks = racers.map(({ car, carIndex }) => {
-      const sprite = this.vehicles[carIndex]
+    const stacks = racers.map(({ car }) => {
+      const { id } = car.spec
+      const sprite = this.vehicles.get(id)!
       if (sprite instanceof DirectionSprite) {
         sprite.setHeading(car.heading)
       } else {
         const turn = Math.round(carTurn(car.heading) / TURN_STEP)
         const wrapped = ((turn % TURN_STEPS) + TURN_STEPS) % TURN_STEPS
-        if (this.turns[carIndex] !== wrapped) {
+        if (this.turns.get(id) !== wrapped) {
           sprite.bake(wrapped * TURN_STEP)
-          this.turns[carIndex] = wrapped
+          this.turns.set(id, wrapped)
         }
       }
       return { ...car.position, sprite, angle: car.heading, lift: car.bump }
@@ -160,9 +162,9 @@ export class Scene {
       ctx.lineWidth = 1
       ctx.stroke()
       for (let i = racers.length - 1; i >= 0; i--) {
-        const { car, carIndex } = racers[i]
+        const { car } = racers[i]
         const heading = Math.atan2(Math.sin(car.heading) * SQUASH, Math.cos(car.heading))
-        drawHeadingMarker(ctx, markers[i].x, markers[i].y, heading, cars[carIndex].color, i === 0 ? 8 : 6)
+        drawHeadingMarker(ctx, markers[i].x, markers[i].y, heading, car.spec.color, i === 0 ? 8 : 6)
       }
     }
   }

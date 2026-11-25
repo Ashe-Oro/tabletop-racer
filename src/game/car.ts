@@ -3,9 +3,11 @@ import type { Solid } from './collision'
 import { clamp, dot } from './geometry'
 import type { Point } from './geometry'
 import { spawn, TABLE_HEIGHT, TABLE_WIDTH } from './track'
-import { CAR_AXLE, CAR_RADIUS, WHEEL_CENTERS } from './cars'
+import { CAR_AXLE, CAR_RADIUS, WHEEL_CENTERS, cars } from './cars'
+import type { CarSpec } from './cars'
 
 const TOP_SPEED = 270
+const COAST_DRAG = 1
 const STEERING_DEADBAND = 8
 const FULL_STEERING_SPEED = 60
 const LOW_SPEED_STEERING = 0.04
@@ -35,7 +37,11 @@ export class Car {
   readonly axle = CAR_AXLE
   readonly radius = CAR_RADIUS
 
+  constructor(public spec: CarSpec = cars[0]) {}
+
   get speed() { return Math.hypot(this.velocity.x, this.velocity.y) }
+  get speedCap() { return TOP_SPEED * this.speedScale * (this.boostTimer > 0 ? this.boostMultiplier : 1) }
+  get mass() { return this.spec.mass }
 
   setBoost(multiplier: number, duration: number) {
     this.boostMultiplier = Math.max(1, multiplier)
@@ -60,7 +66,7 @@ export class Car {
     this.bump = Math.max(0, this.bump - 14 * dt)
     this.contactCooldown = Math.max(0, this.contactCooldown - dt)
     this.contactSteeringTime = Math.max(0, this.contactSteeringTime - dt)
-    const speedCap = TOP_SPEED * this.speedScale * (this.boostTimer > 0 ? this.boostMultiplier : 1)
+    const speedCap = this.speedCap
     this.boostTimer = Math.max(0, this.boostTimer - dt)
     if (this.boostTimer === 0) this.boostMultiplier = 1
     const spinning = this.spinTimer > 0
@@ -77,17 +83,27 @@ export class Car {
     const steering = (steerSpeed === 0
       ? Math.sign(controls.throttle) * (this.contactSteeringTime > 0 ? CONTACT_STEERING : LOW_SPEED_STEERING)
       : clamp(steerSpeed / (FULL_STEERING_SPEED - STEERING_DEADBAND), -1, 1)) * (1 - 0.31 * speedRatio)
-    this.heading += controls.steer * steering * (controls.handbrake ? 4.8 : 3.6) * dt
+    this.heading += controls.steer * steering * (controls.handbrake ? 4.8 : 3.6) * this.spec.handling * dt
 
     forward.x = Math.cos(this.heading)
     forward.y = Math.sin(this.heading)
     const right = { x: -forward.y, y: forward.x }
     let longitudinal = dot(this.velocity, forward)
     let lateral = dot(this.velocity, right)
-    const braking = controls.throttle * longitudinal < 0
-    const acceleration = braking ? 685 : controls.throttle < 0 ? 255 : 470
-    longitudinal += controls.throttle * acceleration * dt
-    longitudinal *= Math.exp(-(controls.handbrake ? 1.6 : controls.throttle ? 0.9 : 2.35) * dt)
+    const { throttle, handbrake } = controls
+    if (throttle > 0 && longitudinal >= 0) {
+      const { accelerationTime, launchBias } = this.spec
+      // Integrate an exponential ramp, normalized to hit the cap at accelerationTime.
+      const target = speedCap / -Math.expm1(-launchBias)
+      const gain = -Math.expm1(-launchBias * throttle * dt / accelerationTime)
+      longitudinal += Math.max(0, target - longitudinal) * gain
+      const drag = COAST_DRAG * (1 - throttle) + (handbrake ? 0.6 : 0)
+      longitudinal *= Math.exp(-drag * dt)
+    } else {
+      const braking = throttle * longitudinal < 0
+      longitudinal += throttle * (braking ? 685 : 255) * dt
+      longitudinal *= Math.exp(-(handbrake ? 1.6 : COAST_DRAG) * dt)
+    }
     longitudinal = clamp(longitudinal, -95, speedCap)
     const cornering = Math.abs(controls.steer) * speedRatio
     const grip = controls.handbrake ? 1.8 : 16 - 3 * cornering

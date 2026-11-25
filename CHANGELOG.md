@@ -2,6 +2,7 @@
 
 ## 3.1.0 — AI Rivals
 
+- Added RC Pro-Am-style launches with a smooth taper to top speed, gentler coasting, and four car setups with distinct acceleration, weight, and handling. The garage shows each car’s stats, weight affects bumps, and a segmented tach shows speed building through the launch.
 - Made four-car Race the default with a staggered starting grid, a 3–2–1–GO countdown, live position, and standings that update as each car finishes. Time Trial starts on throttle and keeps the same saved best lap.
 - Added three rivals that use the player’s driving physics. They choose passing lanes, brake for corners, avoid traffic and props, reverse out of stalls, and adjust pace to the player’s progress.
 - Added car-to-car bumps and future boost and spin-out hooks. All cars cast silhouette shadows, depth-sort with scenery, and can leave skid marks and dust.

@@ -1,16 +1,84 @@
 import { describe, expect, it } from 'vitest'
 import footprints from '../../public/assets/manifest.json'
 import { Car } from './car'
+import { cars } from './cars'
 import { overlaps } from './collision'
 import { buildTrack, TABLE_WIDTH } from './track'
 
 const dt = 1 / 120
 const idle = { throttle: 0, steer: 0, handbrake: false }
+const forward = { ...idle, throttle: 1 }
+const reverse = { ...idle, throttle: -1 }
+
+function launch(car: Car) {
+  car.heading = 0
+  const speeds = [car.speed]
+  for (let i = 0; i < 300; i++) {
+    car.step(dt, forward, [])
+    speeds.push(car.speed)
+  }
+  return speeds
+}
+
+describe('acceleration curve', () => {
+  it.each(cars)('$name launches hard, tapers, and reaches the cap on schedule', spec => {
+    const speeds = launch(new Car(spec))
+    const capFrame = speeds.findIndex(speed => speed >= 270 - 1e-8)
+    expect(speeds[60]).toBeGreaterThan(150)
+    expect(speeds[60]).toBeLessThan(215)
+    expect(speeds[capFrame - 1]).toBeLessThan(270)
+    expect(speeds[capFrame] - speeds[capFrame - 30]).toBeLessThan((speeds[30] - speeds[0]) / 5)
+    expect(capFrame * dt).toBeGreaterThanOrEqual(1.5)
+    expect(capFrame * dt).toBeLessThanOrEqual(2.5)
+    expect(capFrame * dt).toBeCloseTo(spec.accelerationTime)
+    expect(speeds.at(-1)).toBeCloseTo(270)
+  })
+
+  it('defaults to Stripe and lets the F1 reach top speed ahead of the Pickup', () => {
+    expect(new Car().spec).toBe(cars[0])
+    const pickup = launch(new Car(cars[1]))
+    const f1 = launch(new Car(cars[2]))
+    expect(pickup[1]).toBeGreaterThan(launch(new Car())[1])
+    expect(f1[180]).toBeCloseTo(270)
+    expect(pickup[180]).toBeLessThan(265)
+  })
+
+  it('rolls when coasting and scrubs speed quickly in either direction under opposing throttle', () => {
+    const coasting = new Car()
+    const braking = new Car()
+    const reversing = new Car()
+    for (const car of [coasting, braking, reversing]) car.heading = 0
+    coasting.velocity.x = braking.velocity.x = 240
+    reversing.velocity.x = -90
+    reversing.step(dt, forward, [])
+    expect(reversing.velocity.x).toBeGreaterThan(-84)
+
+    for (let i = 0; i < 30; i++) {
+      coasting.step(dt, idle, [])
+      braking.step(dt, reverse, [])
+    }
+    expect(coasting.speed).toBeCloseTo(240 * Math.exp(-0.25))
+    expect(braking.speed).toBeLessThan(coasting.speed / 3)
+    expect(braking.velocity.x).toBeGreaterThan(0)
+  })
+})
 
 describe('picnic-scale car', () => {
+  it('scales steering response by the selected car’s handling', () => {
+    const turns = cars.map(spec => {
+      const car = new Car(spec)
+      car.heading = 0
+      car.velocity.x = 120
+      car.step(dt, { ...forward, steer: 1 }, [])
+      return car.heading
+    })
+    expect(turns[1] / turns[0]).toBeCloseTo(0.95)
+    expect(turns[2] / turns[0]).toBeCloseTo(1.08)
+    expect(turns[3] / turns[0]).toBeCloseTo(1)
+  })
+
   it.each([['left', -1], ['right', 1]])('tracks a held %s turn and stops steering on release', (_, steer) => {
     const car = new Car()
-    const forward = { ...idle, throttle: 1 }
     const turning = { ...forward, steer }
     for (let i = 0; i < 90; i++) car.step(dt, forward, [])
     const initialHeading = car.heading
@@ -161,13 +229,24 @@ describe('temporary car effects', () => {
     const car = new Car()
     car.heading = 0
     car.velocity = { x: 270, y: 0 }
-    car.setBoost(1.2, 0.5)
+    car.setBoost(1.2, 1.5)
     for (let i = 0; i < 40; i++) car.step(dt, { ...idle, throttle: 1 }, [])
+    expect(car.speed).toBeGreaterThan(270)
+    expect(car.speed).toBeLessThan(324)
+    for (let i = 0; i < 120; i++) car.step(dt, forward, [])
     expect(car.speed).toBeCloseTo(324)
-    for (let i = 0; i < 22; i++) car.step(dt, { ...idle, throttle: 1 }, [])
+    for (let i = 0; i < 24; i++) car.step(dt, forward, [])
     expect(car.speed).toBeCloseTo(270)
     expect(car.boostMultiplier).toBe(1)
     expect(car.boostTimer).toBe(0)
+  })
+
+  it('honors speed scaling throughout the ramp', () => {
+    const car = new Car()
+    car.speedScale = 0.8
+    const speeds = launch(car)
+    expect(speeds[222]).toBeCloseTo(216)
+    expect(speeds.at(-1)).toBeCloseTo(216)
   })
 
   it('spins, reduces traction, and returns steering control on expiry', () => {

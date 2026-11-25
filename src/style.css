@@ -102,9 +102,15 @@ h1 {
 }
 .hud-cell small { color: var(--muted); font-size: .59em; }
 .hud-best output, .hud-best > span:first-child, #position.leading { color: var(--gold); }
-.speed { position: relative; }
-#gear { position: absolute; bottom: 11px; right: 12px; font-size: 10px; font-weight: bold; color: var(--muted); }
+.speed { display: grid; grid-template-columns: auto 1fr; align-content: start; align-items: end; }
+.speed > span:first-child, #tach { grid-column: 1 / -1; }
+#gear { justify-self: end; font-size: 10px; font-weight: bold; color: var(--muted); }
 #gear.drifting { color: var(--gold); }
+#tach { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; height: 6px; }
+#tach span { background: #30241f; }
+#tach .lit { background: var(--teal); }
+#tach .lit:nth-child(n+7) { background: var(--gold); }
+#tach .lit:nth-child(n+9) { background: var(--red); }
 
 .viewport {
   position: relative;
@@ -132,6 +138,10 @@ canvas { display: block; image-rendering: pixelated; }
 #car-select { display: grid; grid-template-columns: repeat(4, minmax(24px, 1fr)); gap: 5px; }
 #car-select button { padding: 3px 0; border-bottom: 3px solid var(--car-color); font-size: 12px; }
 #car-select button[aria-pressed="true"] { border-color: var(--car-color); color: var(--car-color); }
+.car-stats { margin: 10px 0 0; font-size: 11px; }
+.car-stats div { display: flex; justify-content: space-between; gap: 4px; padding: 3px 0; }
+.car-stats dt { color: var(--muted); text-transform: uppercase; }
+.car-stats dd { margin: 0; font-weight: bold; font-variant-numeric: tabular-nums; }
 #map { width: 100%; height: auto; background: var(--ink); border: 1px solid var(--rim); }
 .map-key { display: flex; justify-content: space-between; gap: 5px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .map-key i { display: inline-block; width: 7px; height: 7px; margin-right: 2px; background: var(--red); }
@@ -229,10 +239,7 @@ button:hover, button:focus-visible { color: var(--cream); }
 
 @media (max-width: 1000px) {
   .layout { grid-template-columns: minmax(0, 1fr) 181px; }
-  #gear { position: static; }
   .hud-cell { padding: 9px 10px; }
-  .speed { display: grid; grid-template-columns: auto 1fr; align-content: start; align-items: end; gap: 4px; }
-  .speed > span:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 720px) {
@@ -255,6 +262,7 @@ button:hover, button:focus-visible { color: var(--cream); }
   .hud-cell { padding-inline: 5px; }
   .hud-cell > span:first-child { font-size: 9px; letter-spacing: 0; }
   .hud-cell output { font-size: 14px; }
-  #gear { font-size: 8px; }
+  #gear { grid-column: 1 / -1; justify-self: start; font-size: 8px; }
+  #tach { gap: 1px; }
   .finish-card .flag-mark { display: none; }
 }

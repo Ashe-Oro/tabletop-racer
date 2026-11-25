@@ -144,7 +144,7 @@ describe('sprite strips', () => {
       ...directionEntry(8), source: `art/handoff/cars_v3_${slug}_8dir.png`,
     })
     expect(() => validateStrip(id, parsed, 256, 32)).not.toThrow()
-    expect(cars.find(car => car.id === id)).toEqual({ id, name, color })
+    expect(cars.find(car => car.id === id)).toMatchObject({ id, name, color })
   })
 
   it.each([

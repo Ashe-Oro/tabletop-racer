@@ -23,7 +23,10 @@
           <div class="hud-cell"><span>Place</span><output id="position">—</output></div>
           <div class="hud-cell"><span>Lap time</span><output id="time">0:00.000</output></div>
           <div class="hud-cell hud-best"><span>Best lap</span><output id="best">—</output></div>
-          <div class="hud-cell speed"><span>Speed</span><output id="speed">000</output><span id="gear">FWD</span></div>
+          <div class="hud-cell speed">
+            <span>Speed</span><output id="speed">000</output><span id="gear">FWD</span>
+            <div id="tach" role="meter" aria-label="Speed relative to forward limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          </div>
         </div>
         <div class="viewport">
           <canvas id="race" aria-label="Top-down view of the tabletop circuit"></canvas>
@@ -65,6 +68,11 @@
           <h2>Car</h2>
           <output id="car-name">Stripe</output>
           <div id="car-select" role="group" aria-label="Select car"></div>
+          <dl class="car-stats">
+            <div><dt title="Time from standstill to top speed">Accel</dt><dd id="car-accel"></dd></div>
+            <div><dt>Weight</dt><dd id="car-weight"></dd></div>
+            <div><dt>Handling</dt><dd id="car-handling"></dd></div>
+          </dl>
         </section>
         <section class="pit-section splits">
           <h2>Lap splits</h2>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import footprints from '../../public/assets/manifest.json'
 import { RivalController, rubberBandScale } from './ai'
 import { Car } from './car'
+import { cars } from './cars'
 import type { Solid } from './collision'
 import { Race } from './race'
 import { buildTrack, gates, gridSlot, projectRoute, sampleRoute } from './track'
@@ -25,13 +26,14 @@ function drive(car: Car, controller: RivalController, race: Race, solids: readon
 }
 
 describe('rival driving', () => {
-  it.each([0, 1, 2])('finishes three brisk laps at neutral pace (driver %i)', index => {
+  it.each(cars.map((spec, index) => ({ spec, index })))('finishes three brisk laps at neutral pace with $spec.name', ({ spec, index }) => {
     const { heading, ...position } = gridSlot(index)
-    const car = new Car()
+    const car = new Car(spec)
     car.position = position
     car.heading = heading
     const race = new Race(gates, null)
-    const { maxStall } = drive(car, new RivalController(index, false), race, [], 135)
+    const { solids } = buildTrack(footprints)
+    const { maxStall } = drive(car, new RivalController(index, false), race, solids, 135)
     expect(race.lapTimesMs).toHaveLength(3)
     expect(Math.max(...race.lapTimesMs)).toBeLessThan(45_000)
     expect(maxStall).toBeLessThan(3)
