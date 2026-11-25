@@ -6,6 +6,7 @@ import type { Gate } from './race'
 export const TABLE_WIDTH = 1400
 export const TABLE_HEIGHT = 950
 export const TRACK_HALF_WIDTH = 83
+export const TRACK_CONFIG = { OBSTACLES: false as boolean }
 
 const corners: Point[] = [
   { x: 701, y: 752 }, { x: 1033, y: 747 }, { x: 1190, y: 656 },
@@ -34,6 +35,14 @@ export const route = raw.map((p, i) => {
   const forward = { x: (b.x - a.x) / length, y: (b.y - a.y) / length }
   return { ...p, forward }
 })
+
+const longestSegment = Math.max(...route.map((p, i) => {
+  const next = route[(i + 1) % route.length]
+  return Math.hypot(next.x - p.x, next.y - p.y)
+}))
+// Pad the sample circles so they cover the full lane between route points.
+const laneRadius = Math.hypot(TRACK_HALF_WIDTH, longestSegment / 2)
+const lane = route.map(({ x, y }) => ({ x, y, radius: laneRadius }))
 
 export const gates: Gate[] = [0, 2, 3, 5, 7, 8, 10, 11, 12].map(corner => ({
   ...route[corner * SUBDIVISIONS], halfWidth: TRACK_HALF_WIDTH + 3,
@@ -66,11 +75,12 @@ function boundaryProps(side: number, footprints: Record<PropId, Footprint>): Pro
     const asset = curved ? 'coin' : bend % 2 === 0 ? 'ruler' : 'pencil'
     const halfWidth = footprints[asset].sliceWidth / 2
     const halfLength = footprints[asset].sliceHeight / 2
-    const offset = side * (TRACK_HALF_WIDTH + halfWidth + (curved ? -1 : 7))
+    const radius = Math.max(halfWidth, halfLength)
+    const offset = side * (TRACK_HALF_WIDTH + (asset === 'coin' ? radius + 2 : halfWidth + 7))
     const x = p.x - p.forward.y * offset
     const y = p.y + p.forward.x * offset
     const angle = Math.atan2(p.forward.y, p.forward.x) - Math.PI / 2
-    const solid = asset === 'coin' ? { x, y, radius: Math.max(halfWidth, halfLength) }
+    const solid = asset === 'coin' ? { x, y, radius }
       : { x, y, angle, halfWidth, halfLength }
     props.push({ x, y, angle, asset, solid })
   }
@@ -87,25 +97,30 @@ function mugCircle(offset: number, radius: number): Solid {
   }
 }
 
-export function buildTrack(footprints: Record<PropId, Footprint>) {
-  const bowlWidth = Math.min(footprints.mug.sliceWidth, footprints.mug.sliceHeight)
-  const handleLength = footprints.mug.sliceHeight - bowlWidth
-  const props: Prop[] = [
-    { ...mug, asset: 'mug', solid: mugCircle(handleLength / 2, bowlWidth / 2) },
-    { ...box, asset: 'cereal_box', solid: {
-      ...box, halfWidth: footprints.cereal_box.sliceWidth / 2, halfLength: footprints.cereal_box.sliceHeight / 2,
-    } },
-  ]
-  const solids = props.map(prop => prop.solid)
-  if (handleLength > 0) {
-    const handleRadius = Math.min(bowlWidth * 0.1, handleLength / 2)
-    const circles = Math.ceil(handleLength / (2 * handleRadius))
-    for (let i = 0; i < circles; i++) {
-      const offset = (i + 0.5) * handleLength / circles - footprints.mug.sliceHeight / 2
-      solids.push(mugCircle(offset, handleRadius))
+export function buildTrack(footprints: Record<PropId, Footprint>, config = TRACK_CONFIG) {
+  const props: Prop[] = []
+  const solids: Solid[] = []
+  if (config.OBSTACLES) {
+    const bowlWidth = Math.min(footprints.mug.sliceWidth, footprints.mug.sliceHeight)
+    const handleLength = footprints.mug.sliceHeight - bowlWidth
+    props.push(
+      { ...mug, asset: 'mug', solid: mugCircle(handleLength / 2, bowlWidth / 2) },
+      { ...box, asset: 'cereal_box', solid: {
+        ...box, halfWidth: footprints.cereal_box.sliceWidth / 2, halfLength: footprints.cereal_box.sliceHeight / 2,
+      } },
+    )
+    solids.push(...props.map(prop => prop.solid))
+    if (handleLength > 0) {
+      const handleRadius = Math.min(bowlWidth * 0.1, handleLength / 2)
+      const circles = Math.ceil(handleLength / (2 * handleRadius))
+      for (let i = 0; i < circles; i++) {
+        const offset = (i + 0.5) * handleLength / circles - footprints.mug.sliceHeight / 2
+        solids.push(mugCircle(offset, handleRadius))
+      }
     }
   }
   for (const prop of [...boundaryProps(1, footprints), ...boundaryProps(-1, footprints)]) {
+    if (lane.some(sample => overlaps(sample, prop.solid, 0))) continue
     if (solids.some(solid => overlaps(prop.solid, solid, 4))) continue
     props.push(prop)
     solids.push(prop.solid)

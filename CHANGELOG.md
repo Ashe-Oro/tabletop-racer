@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Disabled the in-track mug, cereal box, and their colliders by default and excluded outline props that overlap the driving lane. Pencils, rulers, and coins still outline the circuit. Set `TRACK_CONFIG.OBSTACLES` to `true` to restore the mug and cereal box.
 - Swapped in Artist's Hero Car A as the default car with 36 slices at 43 × 71 px each.
 - Added a runtime fallback to the original placeholder car when the primary car fails to load or validate.
 - Preserved handoff cars during bulk placeholder regeneration and exposed `--bg-tol` for opaque sheets.
