@@ -4,6 +4,9 @@ import type { Countdown, Race } from '../game/race'
 import { TABLE_HEIGHT, TABLE_WIDTH, gates, route } from '../game/track'
 import { makeCanvas } from './assets'
 import { paintCountdown } from './countdown'
+import { paintItemIcon } from './items'
+import { ITEM_NAMES } from '../game/items'
+import type { ItemId } from '../game/items'
 import { drawHeadingMarker, spreadMarkers } from './marker'
 
 interface HudRacer {
@@ -44,6 +47,10 @@ export class Hud {
   private readonly gear = element('gear')
   private readonly tach = element('tach')
   private shownSegments = 0
+  private readonly itemCell = element('item-cell')
+  private readonly itemName = element('item-name')
+  private readonly itemIcon = element<HTMLCanvasElement>('item-icon').getContext('2d')!
+  private shownItem: ItemId | null | undefined | 'unset' = 'unset'
   private readonly splits: HTMLOutputElement[]
   private readonly gates = element('gates')
   private readonly finish = element('finish')
@@ -106,8 +113,17 @@ export class Hud {
     ctx.fillRect(-1, -5, 2, 10)
   }
 
-  draw(racers: readonly HudRacer[], ranks: readonly HudRacer[], countdown: Countdown, position: number | null) {
+  /** `item` is the player's held item, or undefined when items are switched off. */
+  draw(racers: readonly HudRacer[], ranks: readonly HudRacer[], countdown: Countdown, position: number | null,
+    item?: ItemId | null) {
     const { car, race } = racers[0]
+    if (item !== this.shownItem) {
+      this.shownItem = item
+      paintItemIcon(this.itemIcon, item ?? null)
+      show(this.itemName, item === undefined ? 'Off' : item === null ? '—' : ITEM_NAMES[item])
+      this.itemCell.classList.toggle('empty', !item)
+      this.itemCell.classList.toggle('off', item === undefined)
+    }
     show(this.position, position === null ? '—' : place[position - 1])
     this.position.classList.toggle('leading', position === 1)
     if (countdown !== this.shownCountdown) {

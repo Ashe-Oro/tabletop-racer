@@ -2,6 +2,7 @@ import type { Car, Controls } from './car'
 import { boxContact, circleContact } from './collision'
 import type { Solid } from './collision'
 import { clamp, delta, dot } from './geometry'
+import type { Point } from './geometry'
 import { ROUTE_LENGTH, sampleRoute } from './track'
 
 const personalities = [
@@ -39,7 +40,9 @@ export class RivalController {
     this.recoverySteer = 1
   }
 
-  controls(car: Car, distance: number, dt: number, solids: readonly Solid[], traffic: readonly Car[], gap = 0): Controls {
+  /** `pickups` are item spots worth steering through; leave it empty when the car already holds an item. */
+  controls(car: Car, distance: number, dt: number, solids: readonly Solid[], traffic: readonly Car[], gap = 0,
+    pickups: readonly Point[] = []): Controls {
     const moved = this.lastDistance === undefined ? 0
       : distance - this.lastDistance - Math.round((distance - this.lastDistance) / ROUTE_LENGTH) * ROUTE_LENGTH
     this.lastDistance = distance
@@ -70,7 +73,7 @@ export class RivalController {
     const lookahead = 36 + speed * this.style.lookahead
     this.planTimer -= dt
     if (this.planTimer <= 0) {
-      this.targetLane = this.chooseLane(car, distance, side, solids, traffic)
+      this.targetLane = this.chooseLane(car, distance, side, solids, traffic, pickups)
       this.planTimer = 0.09
     }
     this.lane += clamp(this.targetLane - this.lane, -175 * dt, 175 * dt)
@@ -98,7 +101,8 @@ export class RivalController {
     }
   }
 
-  private chooseLane(car: Car, distance: number, side: number, solids: readonly Solid[], traffic: readonly Car[]) {
+  private chooseLane(car: Car, distance: number, side: number, solids: readonly Solid[], traffic: readonly Car[],
+    pickups: readonly Point[]) {
     const horizon = 85 + car.speed * 0.32
     const nearbySolids = solids.filter(solid => {
       const reach = horizon + 95 + ('radius' in solid ? solid.radius : Math.hypot(solid.halfWidth, solid.halfLength))
@@ -106,6 +110,8 @@ export class RivalController {
     })
     const nearbyCars = traffic.filter(other => other !== car
       && Math.hypot(other.position.x - car.position.x, other.position.y - car.position.y) < horizon + 35)
+    const nearbyPickups = pickups.filter(pickup =>
+      Math.hypot(pickup.x - car.position.x, pickup.y - car.position.y) < horizon + 20)
     let bestLane = this.targetLane
     let bestCost = Infinity
     for (const lane of [this.targetLane, this.style.lane, -79, -50, 0, 50, 79]) {
@@ -117,6 +123,9 @@ export class RivalController {
         for (const solid of nearbySolids) {
           const contact = 'radius' in solid ? circleContact(probe, solid) : boxContact(probe, solid)
           if (contact) cost += (16 + contact.depth * 3) * (1 - ahead / (2 * horizon))
+        }
+        for (const pickup of nearbyPickups) {
+          if (Math.hypot(point.x - pickup.x, point.y - pickup.y) < 12) cost -= 9
         }
         const time = Math.min(0.5, ahead / Math.max(110, car.speed))
         for (const other of nearbyCars) {

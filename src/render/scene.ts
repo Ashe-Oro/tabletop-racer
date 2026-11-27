@@ -2,12 +2,14 @@ import type { Car } from '../game/car'
 import { CAR_LENGTH, cars } from '../game/cars'
 import type { CarId } from '../game/cars'
 import { clamp } from '../game/geometry'
+import type { ItemSystem } from '../game/items'
 import { ANT_SCALE, ANT_WALK_DISTANCE, TABLE_HEIGHT, TABLE_WIDTH, spawn } from '../game/track'
 import type { Prop } from '../game/track'
 import type { Assets, FlatAsset } from './assets'
 import { DirectionSprite } from './direction'
 import type { TireEffects } from './effects'
 import { FlatSprite } from './flat'
+import { ItemArt } from './items'
 import { drawHeadingMarker, spreadMarkers } from './marker'
 import { SQUASH, StackSprite, carTurn } from './stack'
 import type { Table } from './table'
@@ -46,6 +48,7 @@ export class Scene {
   private readonly turns = new Map<CarId, number>()
   private camera = { x: spawn.x, y: spawn.y }
   private sceneryTime = 0
+  private readonly itemArt = new ItemArt()
   scale = 1
 
   constructor(private readonly canvas: HTMLCanvasElement, private readonly table: Table,
@@ -81,7 +84,7 @@ export class Scene {
     this.camera = { ...car.position }
   }
 
-  draw(racers: readonly Vehicle[], dt: number, overview: boolean) {
+  draw(racers: readonly Vehicle[], dt: number, overview: boolean, items: ItemSystem | null = null) {
     const { car } = racers[0]
     const { canvas, ctx } = this
     const width = Math.max(1, canvas.clientWidth)
@@ -109,6 +112,7 @@ export class Scene {
     const top = Math.round(height / 2 - centerY * scale)
     this.table.draw(ctx, left, top, scale, width, height)
     for (const { effects } of racers) effects.draw(ctx, left, top, scale)
+    if (items) this.itemArt.drawGround(ctx, items, left, top, scale, dt)
 
     this.sceneryTime += dt
     for (const ant of this.walkingAnts) {
@@ -152,6 +156,7 @@ export class Scene {
     const bodies = [...this.scenery, ...stacks].sort((a, b) => a.y - b.y)
     for (const item of bodies) drawSprite(item, 'shadow')
     for (const item of bodies) drawSprite(item, 'body')
+    if (items) this.itemArt.drawAir(ctx, items, racers.map(({ car }) => car), left, top, scale)
 
     if (overview) {
       const positions = racers.map(({ car }) => ({

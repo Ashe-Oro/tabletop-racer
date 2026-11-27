@@ -6,6 +6,7 @@ import { cars } from './game/cars'
 import { resolveCarCollisions } from './game/collision'
 import { BEST_LAP_KEY, COUNTDOWN_BEAT, Race, parseLapsParam, parseSpeedParam, raceCountdown, raceProgress, rankRacers, readBestLap } from './game/race'
 import type { Countdown, RaceMode } from './game/race'
+import { ItemSystem, routeIsStraight, shouldUseItem } from './game/items'
 import { Respawn } from './game/respawn'
 import { ROUTE_LENGTH, buildTrack, gates, gridSlot, progressWithinCheckpoint, projectRoute } from './game/track'
 import { loadAssets } from './render/assets'
@@ -25,8 +26,10 @@ interface Racer {
   controller?: RivalController
 }
 
-function snapshot({ car, race, respawn }: Racer) {
+function snapshot({ car, race, respawn }: Racer, items: ItemSystem | null) {
   return Object.freeze({
+    item: items?.itemOf(car) ?? null, itemHits: items?.hits.get(car) ?? 0,
+    spinning: car.spinTimer > 0, nitro: car.nitroTimer > 0,
     ...car.position, heading: car.heading, speed: car.speed, lap: race.lap,
     vx: car.velocity.x, vy: car.velocity.y, drifting: car.drifting,
     carId: car.spec.id, carName: car.spec.name, color: car.spec.color,
@@ -38,6 +41,10 @@ function snapshot({ car, race, respawn }: Racer) {
 }
 
 interface RacerState extends ReturnType<typeof snapshot> {
+  readonly itemsEnabled: boolean
+  readonly pickups: number
+  readonly bullets: number
+  readonly hazards: readonly { kind: string, x: number, y: number }[]
   readonly scale: number
   readonly overview: boolean
   readonly mode: RaceMode
@@ -66,6 +73,7 @@ declare global {
 
 const drivingKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'ShiftRight'])
+const itemKeys = new Set(['KeyE', 'Enter', 'NumpadEnter'])
 const stepSeconds = 1 / 120
 
 async function start() {
@@ -76,6 +84,7 @@ async function start() {
   const totalLaps = parseLapsParam(params.get('laps'))
   const autopilot = params.get('autopilot') === '1'
   const playerSpeedScale = parseSpeedParam(params.get('speed'))
+  const itemsParam = params.get('items') !== '0'
   const hud = new Hud(totalLaps, autopilot)
   element('version').textContent = buildVersion
   let bestLap: number | null = null
@@ -89,6 +98,8 @@ async function start() {
   let ranks: Racer[]
   let active = false
   let countdownElapsed = 0
+  let items: ItemSystem | null = null
+  let useItem = false
   let overview = params.get('overview') === '1'
 
   const overviewButton = element<HTMLButtonElement>('overview')
@@ -180,6 +191,9 @@ async function start() {
     }
     assignCars()
     ranks = rankRacers(racers)
+    // Items need rivals to matter, so Time Trial stays a clean run against the clock.
+    items = mode === 'race' && itemsParam ? new ItemSystem() : null
+    useItem = false
     active = false
     countdownElapsed = 0
     keys.clear()
@@ -217,6 +231,12 @@ async function start() {
       if (event.code === 'KeyC') selectCar((carIndex + 1) % cars.length)
       if (event.code === 'KeyR') restart()
     }
+    if (itemKeys.has(event.code)) {
+      if (event.code !== 'KeyE' && event.target instanceof HTMLButtonElement) return
+      event.preventDefault()
+      if (!event.repeat && active && !autopilot) useItem = true
+      return
+    }
     if (!drivingKeys.has(event.code)) return
     if (event.code === 'Space' && !active && event.target instanceof HTMLButtonElement) return
     event.preventDefault()
@@ -233,9 +253,11 @@ async function start() {
   Object.defineProperty(window, '__RACER_STATE__', {
     enumerable: true,
     get: (): RacerState => Object.freeze({
-      ...snapshot(player), scale: scene.scale, overview, mode, autopilot, playerSpeedScale,
+      ...snapshot(player, items), scale: scene.scale, itemsEnabled: items !== null,
+      pickups: items?.availableSpots().length ?? 0, bullets: items?.bullets.length ?? 0,
+      hazards: Object.freeze(items?.hazards.map(({ kind, x, y }) => ({ kind, x, y })) ?? []), overview, mode, autopilot, playerSpeedScale,
       countdown: countdown(), position: position(),
-      rivals: Object.freeze(racers.slice(1).map(snapshot)),
+      rivals: Object.freeze(racers.slice(1).map(racer => snapshot(racer, items))),
       standings: Object.freeze(mode === 'race' ? ranks.map(standing) : []),
     }),
   })
@@ -254,14 +276,30 @@ async function start() {
     const running = racers.filter(racer => !racer.race.finished)
     const traffic = running.map(racer => racer.car)
     const playerProgress = raceProgress(player, ROUTE_LENGTH)
+    if (items) {
+      for (const racer of running) {
+        const item = items.itemOf(racer.car)
+        if (!item) continue
+        const wants = racer.controller
+          ? shouldUseItem({ item, car: racer.car, traffic, heldTime: items.heldFor(racer.car),
+            straight: item === 'nitro' && routeIsStraight(racer.distance) })
+          : useItem
+        if (wants) items.use(racer.car)
+      }
+      useItem = false
+    }
+    // AI drivers plan around dropped hazards and aim for pickups while empty-handed.
+    const planSolids = items?.hazards.length ? [...solids, ...items.hazardSolids()] : solids
+    const pickups = items?.availableSpots() ?? []
     // Plan from the same snapshot before moving any cars.
     const inputs = running.map(racer => racer.controller
-      ? racer.controller.controls(racer.car, racer.distance, stepSeconds, solids, traffic,
-        playerProgress - raceProgress(racer, ROUTE_LENGTH))
+      ? racer.controller.controls(racer.car, racer.distance, stepSeconds, planSolids, traffic,
+        playerProgress - raceProgress(racer, ROUTE_LENGTH), items?.itemOf(racer.car) ? [] : pickups)
       : controls)
     const previous = traffic.map(car => ({ ...car.position }))
     running.forEach(({ car }, i) => car.step(stepSeconds, inputs[i], solids))
     resolveCarCollisions(traffic)
+    items?.step(stepSeconds, traffic, solids)
     running.forEach((racer, i) => {
       const { car, race } = racer
       race.step(previous[i], car.position, stepSeconds * 1000)
@@ -300,8 +338,8 @@ async function start() {
       step(controls)
       accumulator -= stepSeconds
     }
-    scene.draw(racers, dt, overview)
-    hud.draw(racers, ranks, countdown(), position())
+    scene.draw(racers, dt, overview, items)
+    hud.draw(racers, ranks, countdown(), position(), items ? items.itemOf(player.car) : undefined)
     requestAnimationFrame(frame)
   }
 
