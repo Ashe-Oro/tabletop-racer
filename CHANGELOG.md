@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.2.0 — Items
+
+- Added five pickup items in Race mode: **Nitro**, **Oil Slick**, **Bullet**, **Shotgun**, and **Bomb**. Each pickup shows its item on the track inside a turning gold ring, so you can steer toward the one you want.
+- Five rows of three pickups sit across the lane around the loop. A taken pickup returns after 4 seconds and may show a different item.
+- Each car holds one item at a time. A car that already holds an item drives over pickups without taking them. Press E or Enter to use the item. The HUD shows the held item.
+- Nitro raises the top speed by 45% for 1.6 seconds with an immediate kick, then tapers off. Bullet fires a long single shot. Shotgun fires a short three-shot spread. Oil Slick and Bomb drop behind the car. Oil lasts 14 seconds. A bomb arms after 0.45 seconds and goes off on contact or after 2.6 seconds. Its blast throws every car within 52 px. Bullets set off bombs.
+- Hits spin the car out and cut its speed. A short grace period after each hit stops chain stuns.
+- Rivals pick up and use items. They fire at cars lined up ahead, drop traps on cars close behind, save nitro for straights, and steer around dropped hazards. Autopilot uses the same rules.
+- Time Trial has no items. Add `?items=0` to switch them off in Race mode.
+
 ## 3.1.2
 
 - Drive the player car automatically in Race or Time Trial with `?autopilot=1` for QA. The HUD shows when autopilot is active.

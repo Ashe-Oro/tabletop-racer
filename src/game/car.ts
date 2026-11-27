@@ -13,6 +13,8 @@ const FULL_STEERING_SPEED = 60
 const LOW_SPEED_STEERING = 0.04
 const CONTACT_STEERING = 1.7
 const CONTACT_STEERING_GRACE = 0.06
+export const NITRO_MULTIPLIER = 1.45
+const NITRO_FADE = 0.45
 
 export interface Controls {
   throttle: number
@@ -33,6 +35,10 @@ export class Car {
   baseSpeedScale = 1
   speedScale = 1
   spinTimer = 0
+  /** Seconds of item nitro left. Separate from the AI pace boost so the two do not overwrite each other. */
+  nitroTimer = 0
+  /** Seconds during which item hits are ignored, so one hazard cannot chain-stun a car. */
+  hitGrace = 0
   respawnBlink = 0
   private contactCooldown = 0
   private contactSteeringTime = 0
@@ -44,6 +50,8 @@ export class Car {
   get speed() { return Math.hypot(this.velocity.x, this.velocity.y) }
   get speedCap() {
     return TOP_SPEED * this.baseSpeedScale * this.speedScale * (this.boostTimer > 0 ? this.boostMultiplier : 1)
+      // The nitro cap fades out over its last moments so speed tapers instead of snapping back.
+      * (1 + (NITRO_MULTIPLIER - 1) * clamp(this.nitroTimer / NITRO_FADE, 0, 1))
   }
   get mass() { return this.spec.mass }
 
@@ -52,7 +60,7 @@ export class Car {
     this.heading = heading
     this.velocity = { x: 0, y: 0 }
     this.drifting = false
-    this.slip = this.bump = this.spinTimer = 0
+    this.slip = this.bump = this.spinTimer = this.nitroTimer = this.hitGrace = 0
     this.contactCooldown = this.contactSteeringTime = 0
     this.respawnBlink = 1
   }
@@ -64,6 +72,16 @@ export class Car {
 
   spinOut(duration: number) {
     this.spinTimer = Math.max(this.spinTimer, duration)
+  }
+
+  /** Fire the nitro item: raise the cap for a moment and give an immediate shove forward. */
+  nitro(duration: number, kick: number) {
+    this.nitroTimer = Math.max(this.nitroTimer, duration)
+    const forward = { x: Math.cos(this.heading), y: Math.sin(this.heading) }
+    const along = dot(this.velocity, forward)
+    const boosted = Math.min(Math.max(along, 0) + kick, this.speedCap)
+    this.velocity.x += forward.x * (boosted - along)
+    this.velocity.y += forward.y * (boosted - along)
   }
 
   registerImpact(impact: number) {
@@ -81,6 +99,8 @@ export class Car {
     this.contactCooldown = Math.max(0, this.contactCooldown - dt)
     this.contactSteeringTime = Math.max(0, this.contactSteeringTime - dt)
     const speedCap = this.speedCap
+    this.nitroTimer = Math.max(0, this.nitroTimer - dt)
+    this.hitGrace = Math.max(0, this.hitGrace - dt)
     this.boostTimer = Math.max(0, this.boostTimer - dt)
     if (this.boostTimer === 0) this.boostMultiplier = 1
     const spinning = this.spinTimer > 0

@@ -15,6 +15,7 @@ browser. The game and artwork are embedded in that file.
 | Arrow keys or WASD | Accelerate, reverse, and steer |
 | Space or Shift | Handbrake and drift |
 | 1–4, C, or the car buttons | Select Stripe, Pickup, F1, or Taxi |
+| E or Enter | Use your item (Race mode) |
 | R or Restart | Start a new race with the selected car |
 | Overview | Toggle the full-table camera. Add `?overview=1` to open in this view. |
 
@@ -24,6 +25,24 @@ checkered finish line to record a lap. You can roam across the whole
 4,400 × 3,000 art-pixel table. Picnic props can be hit. The default racing
 line stays clear, and setting `TRACK_CONFIG.OBSTACLES` in
 [`src/game/track.ts`](src/game/track.ts) adds six in-lane obstacles.
+
+## Items
+
+In Race mode, item pickups sit on the track in rows of three. Each pickup
+shows the actual item, so you can steer toward the one you want. You hold
+one item at a time. Press E or Enter to use it.
+
+| Item | Type | Effect |
+| --- | --- | --- |
+| Nitro | Boost | A short burst above top speed |
+| Bullet | Fires ahead | Long-range single shot that spins out the first car it hits |
+| Shotgun | Fires ahead | Short-range three-shot spread |
+| Oil Slick | Drops behind | A puddle that spins out cars for 14 seconds |
+| Bomb | Drops behind | Explodes on contact or after a short fuse and throws nearby cars |
+
+Rivals use items too. Time Trial has no items, and `?items=0` turns them
+off in Race mode. Tuning values are at the top of
+[`src/game/items.ts`](src/game/items.ts).
 
 The centerline is 8,465.48 art px long. The follow camera uses 2× zoom
 when the game canvas is at least 670 × 420 CSS px, and 1× on smaller
