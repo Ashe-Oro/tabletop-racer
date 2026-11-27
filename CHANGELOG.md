@@ -4,6 +4,7 @@
 
 - Drive the player car automatically in Race or Time Trial with `?autopilot=1` for QA. The HUD shows when autopilot is active.
 - Set a player-only top-speed multiplier from 0.25 to 1 with `?speed=0.5` or another numeric value. This works with manual driving and autopilot.
+- Added the remaining Artist handoff source files to the public repo, including v1 and current four-views, previews, turntables, viewers, HUD and wood-tile references, cars_v3 frames, style and quality-bar docs, and the art helper scripts.
 
 ## 3.1.1
 

@@ -19,3 +19,6 @@ art/carve_preview/
 art/v2-export/
 
 agent-logs/
+
+# Agent process files (do not publish)
+art/codex-*-task.md
